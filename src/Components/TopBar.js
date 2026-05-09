@@ -60,17 +60,12 @@ class TopBar extends Component{
                         <Container>
                         {styles.showFullName ? (
                             <Typography align='left' sx={{pl: 2}} noWrap='true' variant='subtitle1'>
-                                MilesRaker@gmail.com | (360) 606-8381
+                                Aerospace Electrical Engineer | Active Secret Clearance | Palmdale, CA
                             </Typography>
                             ) : (
-                            <Container>
-                                <Typography align='center'  noWrap='true' variant='subtitle1'>
-                                    MilesRaker@gmail.com
-                                </Typography>
-                                <Typography align='center'  noWrap='true' variant='subtitle1'>
-                                    (360) 606-8381
-                                </Typography>
-                            </Container>
+                            <Typography align='center' noWrap='true' variant='subtitle1'>
+                                Aerospace Electrical Engineer | Active Secret Clearance | Palmdale, CA
+                            </Typography>
                             )}
                         </Container>
 

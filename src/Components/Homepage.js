@@ -7,24 +7,28 @@ function Homepage() {
     return(
         <Stack className='homepageContainer'>
             <Typography variant='h2'>
-                Portfolio 
+                Miles Raker
             </Typography>
             <Typography variant='h5' color="secondary">
-            Software Engineer | Electronics Engineer | Musician
+                Design Engineer | Aerospace Electrical Engineer | Active Secret Clearance
             </Typography>
-            <Typography variant='body1'>I am driven and constantly inspired by the power of human connection. 
-                Connecting people is about empathy, about authentic kindness, and curiosity to understand.
-                This type of connection applies to the individual, groups, and large organizations alike. 
-                My mission is to empower every human to connect, allowing our species to do more, together.
+            <Typography variant='body1'>
+                I design and build experimental aircraft systems at Scaled Composites — one of the most prolific
+                experimental aircraft developers in the world. My work spans the full electrical stack: instrumentation
+                systems, power distribution, control systems, payload networks, and embedded hardware. Company subject
+                matter expert on flight test instrumentation, with hands-on experience across 20+ programs and 50+
+                flight tests. I combine rigorous EE depth with full-stack software capability to deliver complete,
+                end-to-end solutions.
             </Typography>
             <Typography variant='h5' color="secondary">
-                Project: Web Portfolio
+                About This Site
             </Typography>
-            <Typography>
-                This website serves as both a web portfolio and an example of my web design abilities. This website 
-                has been created using React, React-Router, and Material-UI. Source code can be found on github:
+            <Typography variant='body1'>
+                Built with React, React Router, and Material UI. The telemetry demo below is a simulated aircraft
+                parameter display — the kind of real-time instrumentation view I design and operate in flight test.
+                Source code on GitHub:
             </Typography>
-                <a href="https://github.com/MilesRaker/web-portfolio" target="_blank" rel="noreferrer">Source Code</a>
+            <a href="https://github.com/MilesRaker/web-portfolio" target="_blank" rel="noreferrer">Source Code</a>
             <TelemetryDemo />
         </Stack>
     )

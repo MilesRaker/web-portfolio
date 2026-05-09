@@ -1,176 +1,237 @@
 # MilesRaker.com — Portfolio Website
 
-Personal portfolio for [Miles Raker](https://milesraker.com). Built with React, React Router v6, and Material UI v5.
+Personal portfolio for [Miles Raker](https://milesraker.com) — Design Engineer at Scaled Composites, targeting avionics and embedded systems roles. Built with React 18, React Router v6, and Material UI v5.
 
-## Dev Setup
+---
+
+## Table of Contents
+
+- [Live Site](#live-site)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Pages & Routes](#pages--routes)
+- [Roadmap — 2026 Refresh](#roadmap--2026-refresh)
+- [Deployment](#deployment)
+
+---
+
+## Live Site
+
+**[milesraker.com](https://milesraker.com)**
+
+Hosted on Azure Static Web Apps via GitHub Actions CI/CD (`.github/workflows/`).
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 18 |
+| Routing | React Router v6 |
+| UI Components | Material UI v5 (MUI) |
+| CSS-in-JS | Emotion |
+| Charts | Recharts |
+| Resume Rendering | react-markdown |
+| Flight Indicators | react-typescript-flight-indicators |
+| Build Tool | Create React App (react-scripts) |
+| Hosting | Azure Static Web Apps |
+| CI/CD | GitHub Actions |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 16+
+- npm 8+
+
+### Installation
 
 ```bash
+git clone https://github.com/MilesRaker/web-portfolio.git
+cd web-portfolio
 npm install
-npm start       # http://localhost:3000
-npm run build   # production build → /build
 ```
+
+### Development
+
+```bash
+npm start        # Dev server at http://localhost:3000
+npm test         # Run test suite
+npm run build    # Production build → /build
+```
+
+### Resume PDF
+
+The downloadable resume PDF lives at `public/resume.pdf`. It is built separately from the Markdown source at `public/resume.md` using the Python build script in the companion resume repository. To refresh the PDF, rebuild it from Markdown and drop the output into `public/resume.pdf`.
+
+---
 
 ## Project Structure
 
 ```
-src/Components/
-├── Router.js               Route definitions and layout wrapper
-├── TopBar.js               Responsive header (class component, manages resize events)
-├── NavTabsHorizontal.js    Desktop nav tabs (>725px)
-├── NavTabsVertical.js      Mobile nav tabs (<725px)
-├── ThemeProvider.js        MUI custom theme (gray primary, blue secondary #42a5f5)
-├── Homepage.js             Landing page
-├── Resume.js               Resume page
-├── Values.js               Personal values — MUI Accordion
-└── Projects.js             Projects showcase
+web-portfolio/
+├── .claude/                         # Claude Code workspace config
+│   ├── agents/                      # Specialized sub-agents for portfolio tasks
+│   │   ├── accessibility-checker.md
+│   │   ├── build-check.md
+│   │   ├── portfolio-reviewer.md
+│   │   ├── project-card-writer.md
+│   │   ├── recharts-helper.md
+│   │   └── resume-sync.md
+│   └── settings.local.json
+├── .github/
+│   └── workflows/                   # Azure Static Web Apps deployment pipeline
+├── public/
+│   ├── index.html                   # HTML shell
+│   ├── resume.md                    # Markdown source of truth for resume
+│   ├── resume.pdf                   # Downloadable PDF (built from resume.md)
+│   ├── manifest.json
+│   └── robots.txt
+└── src/
+    ├── index.js                     # React root — mounts Router, loads Roboto font
+    ├── index.css                    # Global styles
+    └── Components/
+        ├── Router.js                # Route definitions + ThemeProvider wrapper
+        ├── TopBar.js                # Responsive header (class component)
+        ├── NavTabsHorizontal.js     # Desktop navigation (>725px)
+        ├── NavTabsVertical.js       # Mobile navigation (<725px)
+        ├── ThemeProvider.js         # MUI custom theme (gray primary, blue secondary)
+        ├── Homepage.js              # Landing page
+        ├── Resume.js                # Interactive resume (parses resume.md via react-markdown)
+        ├── Skills.js                # Radar + bar chart skill visualization (Recharts)
+        ├── TelemetryDemo.js         # Real-time simulated aircraft parameter display
+        ├── Projects.js              # Project showcase cards
+        ├── Values.js                # Personal values (MUI Accordion)
+        └── images/
+            └── ResumeImg.png        # Resume image fallback
 ```
 
-## Current Pages
+### Theme
 
-| Route | Status | Description |
-|---|---|---|
-| `/` | Done | Landing page with intro and links |
-| `/resume` | In progress | Interactive resume (see Roadmap) |
-| `/values` | Done | Six personal values in accordion layout |
-| `/projects` | In progress | Project showcase cards (see Roadmap) |
+Configured in `ThemeProvider.js`:
+
+- **Primary:** light gray (`#fafafa` / `#c7c7c7`)
+- **Secondary:** blue (`#42a5f5`)
+- **Typography:** Roboto (loaded via `@fontsource/roboto`)
+
+---
+
+## Pages & Routes
+
+| Route | Component | Status | Description |
+|---|---|---|---|
+| `/` | `Homepage.js` | Done | Landing page with intro and navigation links |
+| `/resume` | `Resume.js` | Done | Interactive resume rendered from Markdown; includes Skills visualization and Telemetry Demo |
+| `/projects` | `Projects.js` | Done | Project cards for featured engineering work |
+| `/values` | `Values.js` | Done | Six personal values in an MUI Accordion layout |
 
 ---
 
 ## Roadmap — 2026 Refresh
 
-Context: updating the portfolio for a job search targeting avionics/embedded roles. Priority order below.
+Context: portfolio refresh targeting avionics and embedded systems roles.
 
 ---
 
-### 1. Interactive Resume Page
+### 1. Interactive Resume Page — **Complete**
 
-**Goal:** Replace the static PNG with a properly rendered, interactive resume.
+Replaced a static PNG with a fully rendered, interactive resume driven by a Markdown source file.
 
-**Approach:**
-- Resume source of truth is a Markdown file maintained separately (`Miles Raker Resume 2026 DRAFT.md`)
-- Parse the Markdown in React (using `react-markdown` or a lightweight custom parser) and render it as a styled component that matches the existing MUI theme
-- Drop the PDF output from `build_resume.py` into `public/resume.pdf` and add a Download button
-- No separate data source to maintain — the Markdown file drives both the PDF and the web view
-
-**What "interactive" means here:**
-- Working hyperlinks (LinkedIn, GitHub)
+**Implemented:**
+- `public/resume.md` is the single source of truth — drives both the React web view and the downloadable PDF
+- Parsed and rendered via `react-markdown` with MUI component overrides
+- Skills section rendered as MUI Chip tags
+- Download PDF button links to `public/resume.pdf`
 - Responsive layout (readable on mobile)
-- Skills section rendered as tag chips
-- Download PDF button in the header
+- Working hyperlinks (LinkedIn, GitHub)
+
+**Commit:** `33d63af` — Implement interactive resume page with react-markdown and MUI
 
 ---
 
-### 2. Projects Page
+### 2. Projects Page — **Complete**
 
-**Goal:** Showcase 4–6 projects with cards linking to detail views or external repos.
+Showcase of featured engineering projects, each with a title, description, tech tag list, and optional external link.
 
-**Projects to include (in priority order):**
+**Projects included:**
 
-| Project | Tech | Notes |
-|---|---|---|
-| Vanguard Instrumentation System | Python, Curtiss-Wright/IADS, sensor selection | Crewed tech demonstrator; Northrop Grumman publicly announced |
-| Landing Gear & Fuel Control Systems | Relay logic, fabrication, validation | Clean-sheet design, 18-month program |
-| Deimos/Phobos Fuel Controller Redesign | Altium (PCB), Arduino/Python, custom test rig | Embedded redesign + acceptance test |
-| IADS Parameter Management Tool | C# | Internal tooling for managing 2,500+ telemetry parameters |
-| Python Network Test Suite | Python | Custom validation software for payload network integration |
-| Washington Vets2Tech Hiring Portal | React.js | Public intern project; GitHub-linked |
-
-**Card structure:** Title · 2–3 sentence description · tech tag list · optional link
-
-**Sensitivity note:** Do not reference the unacknowledged classified network program by name or as a project card. Resume bullet is appropriate; featured project card is not.
-
----
-
-### 3. Skills Visualization
-
-**Goal:** Show breadth across disciplines visually — unusual for a portfolio and relevant for avionics/systems roles.
-
-**Placement:** Embedded section at the bottom of the Resume page (`/resume`) — skills read in context with the work history that built them, no extra nav item needed.
-
-**Chart type:** Radar chart (cluster-level overview) + expandable per-skill breakdown on click.
-- Radar gives the at-a-glance "shape of expertise" recruiters remember
-- Click a cluster axis → inline horizontal bar chart of individual skills with tier labels
-- Mobile fallback: drop the radar; render a flat grouped bar chart (radar is illegible at narrow widths)
-
-**Skill tiers (proficiency, not numeric):**
-
-| Tier | Meaning |
+| Project | Tech |
 |---|---|
-| Familiar | Have used it; understand fundamentals; not a daily tool |
-| Proficient | Comfortable; have delivered real work with it |
-| Advanced | A go-to tool; have trained others or led efforts with it |
-| Expert | Deep domain authority; have designed systems around it |
+| Vanguard Instrumentation System | Python, Curtiss-Wright/IADS, sensor selection |
+| Landing Gear & Fuel Control Systems | Relay logic, fabrication, validation |
+| Deimos/Phobos Fuel Controller Redesign | Altium (PCB), Arduino/Python, custom test rig |
+| IADS Parameter Management Tool | C# |
+| Python Network Test Suite | Python |
+| Washington Vets2Tech Hiring Portal | React.js |
 
-Tiers map to values `1–4` internally for chart sizing; labels surface in tooltips and the bar breakdown.
+**Commit:** `88b62a3` — Added project cards
 
-**Discipline clusters and skills:**
+---
 
-| Cluster | Skill | Tier |
-|---|---|---|
-| Instrumentation & Flight Test | IADS / Curtiss-Wright | Advanced |
-| | Sensor selection & integration | Advanced |
-| | Data acquisition systems | Advanced |
-| | Telemetry system design | Proficient |
-| | Flight test execution | Proficient |
-| Electrical Engineering | Relay / discrete logic | Advanced |
-| | Circuit analysis | Advanced |
-| | PCB design (Altium) | Proficient |
-| | Power distribution | Proficient |
-| | Fabrication & validation | Proficient |
-| Networking & Protocols | Payload network integration | Advanced |
-| | Ethernet / IP | Proficient |
-| | Protocol analysis & testing | Proficient |
-| Software & Programming | Python | Advanced |
-| | C# | Proficient |
-| | JavaScript / React | Proficient |
-| | Arduino / embedded C | Familiar |
-| | MATLAB | Familiar |
-| Systems / Program Management | T&E planning & execution | Advanced |
-| | Technical documentation | Advanced |
-| | Cross-functional coordination | Proficient |
-| | Requirements development | Proficient |
+### 3. Skills Visualization — **Complete**
 
-**Data model (in-component, no external file):**
+Radar chart and expandable bar chart embedded at the bottom of the Resume page, showing breadth across five engineering discipline clusters.
 
-```js
-const SKILLS = [
-  { name: "IADS / Curtiss-Wright", cluster: "Instrumentation & Flight Test", tier: "Advanced" },
-  // ...
-];
+**Implemented:**
+- Five-axis radar chart (cluster-level overview) built with Recharts
+- Click a cluster axis to expand a horizontal bar chart of individual skills
+- Four proficiency tiers: Familiar / Proficient / Advanced / Expert
+- Mobile-responsive: flat grouped bar chart at narrow widths where radar is illegible
+- Hover tooltips listing individual skills and tiers
+- Active cluster highlighted on radar while expanded
 
-const TIER_VALUE = { Familiar: 1, Proficient: 2, Advanced: 3, Expert: 4 };
+**Discipline clusters:** Instrumentation & Flight Test · Electrical Engineering · Networking & Protocols · Software & Programming · Systems / Program Management
+
+**Commit:** `da33f1d` — Add Skills Visualization to Resume page
+
+---
+
+### 4. Telemetry Demo — **Complete**
+
+Real-time simulated aircraft parameter display — a differentiating feature for avionics/embedded interviews. Mimics the kind of IADS telemetry display used in flight test operations.
+
+**Implemented:**
+- Live-scrolling Recharts line charts for altitude, airspeed, sideslip angle, and g-load
+- Full circuit autopilot with physics simulation (takeoff roll, climb, cruise, descent, landing)
+- Interactive manual controls: throttle, pitch, roll, landing gear
+- Seamless autopilot ↔ manual mode transitions
+- Instrument panel with flight indicators (attitude, heading, airspeed, altitude)
+
+**Commits:**
+- `edacc33` — Added Telemetry Demo
+- `d73ea97` — Expand TelemetryDemo with interactive controls, physics, and UI improvements
+- `a7f9d88` — Overhaul TelemetryDemo flight sim with full circuit autopilot and seamless mode transitions
+- `4f029ab` — Simplify TelemetryDemo: extract constants, deduplicate reset logic, fix efficiency issues
+
+---
+
+### 5. Update Landing Page — **Complete**
+
+Homepage refresh to reflect current job search focus on avionics and embedded systems roles.
+
+**Commits:** `ecf4a97` — Homepage redesign · `414138d` — Homepage is now responsive
+
+---
+
+### 6. Migrate from Create React App to Vite — **Pending**
+
+Migrate from `react-scripts` (CRA) to Vite. CRA is abandoned by Meta and its internal dependencies carry unfixable audit vulnerabilities. Vite provides faster dev startup, faster hot reload, and a clean security posture.
+
+---
+
+## Deployment
+
+Deployed automatically to **Azure Static Web Apps** on every push to `master` via the GitHub Actions workflow in `.github/workflows/`. No manual deploy step required.
+
+Build output is the `/build` directory produced by `npm run build`. The Azure workflow handles upload.
+
+To test the production build locally before pushing:
+
+```bash
+npm run build
+npx serve -s build
 ```
-
-Cluster score for the radar = average `TIER_VALUE` across its skills (computed at render time).
-
-**UX behavior:**
-- Default: radar with five axes; each axis label shows cluster name + average tier label
-- Hover: tooltip listing individual skills and their tiers
-- Click cluster: expands a horizontal bar chart below (or as a popover on desktop) with per-skill bars colored by tier
-- Active cluster is highlighted on the radar while expanded
-
-**Component:** `src/Components/Skills.js` — imported and rendered inside `Resume.js` beneath the education section.
-
-**Sensitivity note:** Do not include any skill names that could imply knowledge of undisclosed programs or classified systems.
-
----
-
-### 4. Telemetry Demo (Stretch Goal)
-
-**Goal:** A real-time simulated aircraft parameter display — differentiating for avionics/embedded roles.
-
-**Approach:** Fake sensor feed (altitude, airspeed, sideslip angle, g-load) scrolling in real time using `recharts`. Mimics the kind of IADS display built and operated in the day job. Even a simple version is a genuine conversation starter in avionics interviews.
-
----
-
-### 5. Update Landing Page
-
-**Goal:** Refresh the homepage to reflect the current job search and set the tone for avionics/embedded roles.
-
----
-
-### 6. Migrate from Create React App to Vite
-
-Migrate from Create React App to Vite, which is the modern replacement. CRA (`react-scripts`) is abandoned by Meta and its internal dependencies carry unfixable security vulnerabilities. Vite resolves all outstanding `npm audit` issues and provides significantly faster dev startup and hot reload.
-
-### 7. Add interactive flight controls to instrumentation demo.
