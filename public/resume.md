@@ -13,7 +13,7 @@ Aerospace electrical engineer who has taken programs from clean-sheet design to 
 
 ## Technical Skills
 
-**Instrumentation & Flight Test:** IADS/RTS | DAS Studio | Curtiss-Wright ACRA KAM-500,  NET/SWI/101 | Parvus DuraNET | Quasonix | Silvus | Starlink | Starshield | Sensor selection & calibration (strain gauges, thermocouples, pressure transducers, accelerometers, string potentiometers, air data probes, alpha/beta vanes, position sensors, pressure switches, ARINC-429/RS-232/RS-422 bus instruments)
+**Instrumentation & Flight Test:** IADS/RTS | DAS Studio | Curtiss-Wright ACRA KAM-500,  NET/SWI/101 | Parvus DuraNET | Quasonix | Silvus | Starlink | Starshield | Sensor selection & calibration
 
 **Electrical Engineering:** Power distribution design (AC 43.13) | Electrical load analysis | Control system design | PCB design (Altium) | Harness design (Visio) | Mechanical design & fabrication (Siemens NX, 3D printing, water jet, lathe)
 

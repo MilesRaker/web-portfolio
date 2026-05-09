@@ -5,6 +5,7 @@ import {
   Button, List, ListItem, Paper, Stack, CircularProgress,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import Skills from './Skills';
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
 
@@ -243,6 +244,7 @@ export default function Resume() {
         </Typography>
         <SectionHeader title="Technical Skills" />
         <SkillsSection text={sections['Technical Skills'] || ''} />
+        <Skills />
         <SectionHeader title="Professional Experience" />
         <ExperienceSection text={sections['Professional Experience'] || ''} />
         <SectionHeader title="Education" />
