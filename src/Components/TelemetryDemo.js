@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Chip, Stack } from '@mui/material';
-import { AttitudeIndicator, Altimeter } from 'react-typescript-flight-indicators';
+import { Box, Button, Typography, Chip, Stack, useMediaQuery } from '@mui/material';
+import { AttitudeIndicator, Altimeter, HeadingIndicator } from 'react-typescript-flight-indicators';
 import GaugeComponent from 'react-gauge-component';
 
 // Handling qualities flight profile — loops every 55 seconds
@@ -9,19 +9,27 @@ const SCRIPT = [
   { t:  5, pitch:  8, roll:   0, ias: 278, alt: 15100, g: 1.8, beta:  0, phase: 'Pitch Doublet ↑' },
   { t:  7, pitch: -5, roll:   0, ias: 282, alt: 14950, g: 0.4, beta:  0, phase: 'Pitch Doublet ↓' },
   { t: 10, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Recovery' },
-  { t: 14, pitch:  2, roll: -30, ias: 280, alt: 15050, g: 1.2, beta: -1, phase: 'Left Roll' },
+  { t: 14, pitch:  2, roll: -30, ias: 280, alt: 15050, g: 1.2, beta: -1, phase: 'Right Roll' },
   { t: 18, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Wings Level' },
-  { t: 22, pitch:  2, roll:  30, ias: 280, alt: 15050, g: 1.2, beta:  1, phase: 'Right Roll' },
+  { t: 22, pitch:  2, roll:  30, ias: 280, alt: 15050, g: 1.2, beta:  1, phase: 'Left Roll' },
   { t: 26, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Wings Level' },
   { t: 30, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Cruise' },
   { t: 33, pitch:  0, roll:  -5, ias: 280, alt: 15000, g: 1.0, beta: -6, phase: 'Sideslip Left' },
   { t: 37, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Recovery' },
   { t: 40, pitch:  0, roll:   5, ias: 280, alt: 15000, g: 1.0, beta:  6, phase: 'Sideslip Right' },
   { t: 44, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Cruise' },
-  { t: 55, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Cruise' },
+  // Approach to stall — power back, pitch up to maintain altitude while decelerating
+  { t: 48, pitch:  3, roll:   0, ias: 250, alt: 15100, g: 1.0, beta:  0, phase: 'Decelerating' },
+  { t: 55, pitch: 10, roll:   0, ias: 190, alt: 15400, g: 1.0, beta:  0, phase: 'Approach to Stall' },
+  { t: 62, pitch: 18, roll:   0, ias: 135, alt: 15700, g: 0.9, beta:  0, phase: 'Approach to Stall' },
+  { t: 66, pitch: 21, roll:   0, ias: 122, alt: 15750, g: 0.6, beta:  0, phase: 'Stall Warning' },
+  { t: 68, pitch: 22, roll:   2, ias: 115, alt: 15720, g: 0.3, beta:  0, phase: 'Stall' },
+  { t: 71, pitch:  5, roll:   0, ias: 138, alt: 15580, g: 1.3, beta:  0, phase: 'Recovery' },
+  { t: 76, pitch:  0, roll:   0, ias: 205, alt: 15280, g: 1.0, beta:  0, phase: 'Recovery' },
+  { t: 84, pitch:  0, roll:   0, ias: 280, alt: 15000, g: 1.0, beta:  0, phase: 'Cruise' },
 ];
 
-const LOOP_MS = 55000;
+const LOOP_MS = 84000;
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
@@ -38,15 +46,345 @@ function sample(elapsedMs) {
   const span = b.t - a.t;
   const alpha = span === 0 ? 0 : (t - a.t) / span;
   return {
-    pitch: lerp(a.pitch, b.pitch, alpha),
-    roll:  lerp(a.roll,  b.roll,  alpha),
-    ias:   Math.round(lerp(a.ias, b.ias, alpha)),
-    alt:   Math.round(lerp(a.alt, b.alt, alpha)),
-    g:     parseFloat(lerp(a.g, b.g, alpha).toFixed(2)),
-    beta:  parseFloat(lerp(a.beta, b.beta, alpha).toFixed(1)),
-    phase: a.phase,
+    pitch:   lerp(a.pitch, b.pitch, alpha),
+    roll:    lerp(a.roll,  b.roll,  alpha),
+    ias:     Math.round(lerp(a.ias, b.ias, alpha)),
+    alt:     Math.round(lerp(a.alt, b.alt, alpha)),
+    g:       parseFloat(lerp(a.g, b.g, alpha).toFixed(2)),
+    beta:    parseFloat(lerp(a.beta, b.beta, alpha).toFixed(1)),
+    heading: 0,
+    phase:   a.phase,
   };
 }
+
+// ── Physics ───────────────────────────────────────────────────────────────────
+
+const STALL_SPEED    = 120;
+const OVERSPEED_WARN = 370;
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function toRad(deg)        { return deg * Math.PI / 180; }
+
+const INIT_PHYSICS = {
+  pitch: 0, roll: 0, heading: 0, alt: 15000,
+  ias: 280, vSpeed: 0, g: 1.0, beta: 0,
+};
+
+function computePhase(s) {
+  if (s.ias < STALL_SPEED)                              return 'STALL';
+  if (s.ias > OVERSPEED_WARN)                           return 'OVERSPEED';
+  if (s.g > 3.5)                                        return 'HIGH G';
+  if (s.vSpeed > 15  && Math.abs(s.pitch) > 5)         return 'CLIMBING';
+  if (s.vSpeed < -15 && Math.abs(s.pitch) > 5)         return 'DESCENDING';
+  if (Math.abs(s.beta) > 4)                             return 'SIDESLIP';
+  if (Math.abs(s.roll) > 25 && s.vSpeed < -5)          return 'BANKED TURN';
+  if (Math.abs(s.roll) > 25)                            return 'IN BANK';
+  return 'CRUISE';
+}
+
+function stepPhysics(s, ctrl) {
+  const dt = 0.05;
+  const { stickX, stickY, throttle, rudder } = ctrl;
+  const stalled = s.ias < STALL_SPEED;
+
+  // Roll
+  const rollRate = stickX * 35;
+  let roll = clamp(s.roll + rollRate * dt, -180, 180);
+
+  // Pitch — static stability provides restoring moment toward trim; equilibrium pitch
+  // = stickY × 15 × iasRatio / 0.4, so slight back pressure finds a steady pitch angle.
+  const iasRatio     = stalled ? 0.1 : clamp(s.ias / 200, 0.1, 2.0);
+  const stabilityRate = s.pitch * 0.4; // restoring: 0.4°/s per degree off trim
+  let pitchRate      = stickY * 15 * iasRatio - stabilityRate;
+  if (stalled) pitchRate -= 3;
+  pitchRate -= Math.sin(toRad(roll)) ** 2 * 8; // bank-induced nose-drop
+  let pitch = clamp(s.pitch + pitchRate * dt, -60, 60);
+
+  // Heading — bank induces coordinated yaw; rudder adds yaw directly
+  const coordYaw = Math.sin(toRad(roll)) * s.ias / 2000;
+  let heading = (s.heading + (coordYaw + rudder * 15) * dt) % 360;
+  if (heading < 0) heading += 360;
+
+  // Sideslip
+  const naturalBeta = Math.sin(toRad(roll)) * 0.3;
+  const beta = lerp(s.beta, rudder * 12 - naturalBeta, 0.08);
+
+  // Airspeed — thrust minus pitch drag minus bank-induced drag
+  const altFactor   = clamp((60000 - s.alt) / 30000, 0, 1);
+  const thrustAccel = (throttle - 0.3) * 18 * altFactor;
+  const pitchDrag   = Math.sin(toRad(pitch)) * 25;
+  const cosRoll     = Math.cos(toRad(roll));
+  const safeCos     = Math.max(Math.abs(cosRoll), 0.05);
+  const bankDrag    = (1 / safeCos - 1) * 3;
+  let ias = clamp(s.ias + (thrustAccel - pitchDrag - bankDrag) * dt, 0, 500);
+
+  // Vertical speed & altitude
+  let vSpeed = ias * Math.sin(toRad(pitch)) * 1.69;
+  let alt = s.alt + vSpeed * dt;
+  if (alt <= 500)   { alt = 500;   vSpeed = Math.max(0, vSpeed); }
+  if (alt >= 60000) { alt = 60000; vSpeed = Math.min(0, vSpeed); }
+
+  // G-load: bank factor plus pitch acceleration contribution
+  const bankG  = stalled ? 1 : (1 / safeCos);
+  const pitchG = (pitchRate * ias) / 1800;
+  const g = clamp(bankG + pitchG, -0.5, 8.0);
+
+  // Roll stability — hands-off drifts back toward wings level
+  if (Math.abs(stickX) < 0.05) roll = lerp(roll, 0, 0.01);
+
+  return { pitch, roll, heading, alt, ias, vSpeed, g, beta };
+}
+
+function useFlightPhysics(controlsRef, active) {
+  const physRef = useRef({ ...INIT_PHYSICS });
+  const [state, setState] = useState(() => ({ ...INIT_PHYSICS, phase: 'CRUISE' }));
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      const next = stepPhysics(physRef.current, controlsRef.current);
+      physRef.current = next;
+      setState({ ...next, phase: computePhase(next) });
+    }, 50);
+    return () => clearInterval(id);
+  }, [active]);
+
+  function reset() { physRef.current = { ...INIT_PHYSICS }; }
+
+  return { state, reset };
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+const STICK_R = 80; // px — radius of stick zone
+
+// displayPos: { x, y } in pixels from centre — used in auto mode
+function StickControl({ controlsRef, displayPos, interactive }) {
+  const puckPosRef = useRef({ x: 0, y: 0 });
+  const [puckPos, setPuckPos] = useState({ x: 0, y: 0 });
+  const draggingRef = useRef(false);
+  const rafRef      = useRef(null);
+  const zoneRef     = useRef(null);
+
+  function movePuck(x, y) {
+    const dist = Math.sqrt(x * x + y * y);
+    const scale = dist > STICK_R ? STICK_R / dist : 1;
+    const pos = { x: x * scale, y: y * scale };
+    puckPosRef.current = pos;
+    setPuckPos(pos);
+    controlsRef.current.stickX = -pos.x / STICK_R;
+    controlsRef.current.stickY =  pos.y / STICK_R;
+  }
+
+  function springBack() {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const { x: fromX, y: fromY } = puckPosRef.current;
+    const t0 = Date.now();
+    function frame() {
+      const elapsed = Date.now() - t0;
+      const t = Math.min(elapsed / 200, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      movePuck(fromX * (1 - eased), fromY * (1 - eased));
+      if (t < 1) rafRef.current = requestAnimationFrame(frame);
+    }
+    rafRef.current = requestAnimationFrame(frame);
+  }
+
+  useEffect(() => {
+    if (!interactive) return;
+    function onMove(e) {
+      if (!draggingRef.current || !zoneRef.current) return;
+      const rect = zoneRef.current.getBoundingClientRect();
+      movePuck(e.clientX - (rect.left + rect.width / 2),
+               e.clientY - (rect.top  + rect.height / 2));
+    }
+    function onUp() {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      springBack();
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    };
+  }, [interactive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const renderPos = interactive ? puckPos : { x: displayPos?.x ?? 0, y: displayPos?.y ?? 0 };
+  const puckColor = interactive ? '#00e676' : '#42a5f5';
+  const puckGlow  = interactive ? '0 0 8px #00e676' : '0 0 6px #42a5f5';
+
+  return (
+    <Box
+      ref={zoneRef}
+      onMouseDown={interactive ? (e => {
+        e.preventDefault();
+        draggingRef.current = true;
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      }) : undefined}
+      sx={{
+        width: STICK_R * 2, height: STICK_R * 2, borderRadius: '50%',
+        border: `1px solid #1e2a38`, bgcolor: '#0a1520',
+        position: 'relative', cursor: interactive ? 'crosshair' : 'default', flexShrink: 0,
+      }}
+    >
+      <Box sx={{ position: 'absolute', top: '50%', left: 4, right: 4, height: '1px', bgcolor: '#1e2a38', transform: 'translateY(-50%)' }} />
+      <Box sx={{ position: 'absolute', left: '50%', top: 4, bottom: 4, width: '1px', bgcolor: '#1e2a38', transform: 'translateX(-50%)' }} />
+      <Box sx={{
+        position: 'absolute', width: 18, height: 18, borderRadius: '50%',
+        bgcolor: puckColor, boxShadow: puckGlow,
+        top:  `calc(50% + ${renderPos.y}px - 9px)`,
+        left: `calc(50% + ${renderPos.x}px - 9px)`,
+        userSelect: 'none', pointerEvents: 'none',
+        transition: interactive ? 'none' : 'top 0.1s ease-out, left 0.1s ease-out',
+      }} />
+    </Box>
+  );
+}
+
+const THROTTLE_TRACK_H  = 160;
+const THROTTLE_HANDLE_H = 20;
+const THROTTLE_RANGE    = THROTTLE_TRACK_H - THROTTLE_HANDLE_H;
+
+function ThrottleControl({ value, onChange, interactive }) {
+  const draggingRef  = useRef(false);
+  const dragStartRef = useRef({ mouseY: 0, throttle: 0 });
+  const trackRef     = useRef(null);
+
+  const handleTop   = (1 - value) * THROTTLE_RANGE;
+  const handleColor = value > 0.95 ? '#ff3d00' : value > 0.80 ? '#ffa000' : (interactive ? '#00e676' : '#42a5f5');
+
+  useEffect(() => {
+    if (!interactive) return;
+    function onMove(e) {
+      if (!draggingRef.current) return;
+      const dy = e.clientY - dragStartRef.current.mouseY;
+      onChange(clamp(dragStartRef.current.throttle - dy / THROTTLE_RANGE, 0, 1));
+    }
+    function onUp() { draggingRef.current = false; }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    };
+  }, [interactive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startDrag(e, fromThrottle) {
+    e.preventDefault();
+    draggingRef.current  = true;
+    dragStartRef.current = { mouseY: e.clientY, throttle: fromThrottle };
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+      <Box
+        ref={trackRef}
+        sx={{
+          width: 28, height: THROTTLE_TRACK_H, bgcolor: '#0a1520',
+          border: '1px solid #1e2a38', borderRadius: 1,
+          position: 'relative', cursor: interactive ? 'ns-resize' : 'default',
+        }}
+        onMouseDown={interactive ? (e => {
+          if (!trackRef.current) return;
+          const rect   = trackRef.current.getBoundingClientRect();
+          const jumped = clamp(1 - (e.clientY - rect.top) / THROTTLE_TRACK_H, 0, 1);
+          onChange(jumped);
+          startDrag(e, jumped);
+        }) : undefined}
+      >
+        <Box sx={{
+          position: 'absolute', bottom: 0, left: 2, right: 2,
+          height: `${value * 100}%`, bgcolor: handleColor, opacity: 0.15, borderRadius: 0.5,
+        }} />
+        <Box
+          onMouseDown={interactive ? (e => { e.stopPropagation(); startDrag(e, value); }) : undefined}
+          sx={{
+            position: 'absolute', top: handleTop, left: 2, right: 2,
+            height: THROTTLE_HANDLE_H, bgcolor: handleColor, borderRadius: 0.5,
+            boxShadow: `0 0 6px ${handleColor}`,
+            cursor: interactive ? 'ns-resize' : 'default',
+            transition: interactive ? 'none' : 'top 0.1s ease-out',
+          }}
+        />
+      </Box>
+      <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>
+        {Math.round(value * 100)}%
+      </Typography>
+    </Box>
+  );
+}
+
+function RudderStripChart({ value }) {
+  const pct      = Math.abs(value) * 100;
+  // Thresholds match sideslip gauge: 25 % ≈ 3° beta, 50 % ≈ 6° beta (beta ≈ rudder × 12)
+  const barColor = pct > 50 ? '#ff3d00' : pct > 25 ? '#ffa000' : '#00e676';
+
+  return (
+    <Box sx={{ width: '100%', px: 1 }}>
+      <Box sx={{
+        height: 36, bgcolor: '#0a1520', border: '1px solid #1e2a38', borderRadius: 1,
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Deflection bar — extends from center toward L or R */}
+        {Math.abs(value) > 0.01 && (
+          <Box sx={{
+            position: 'absolute', top: 5, bottom: 5,
+            left:  value < 0 ? `${(1 + value) * 50}%` : '50%',
+            width: `${Math.abs(value) * 50}%`,
+            bgcolor: barColor, opacity: 0.75, borderRadius: 0.5,
+          }} />
+        )}
+        {/* Tick marks at ±25%, ±50%, ±75% */}
+        {[-75, -50, -25, 25, 50, 75].map(tick => (
+          <Box key={tick} sx={{
+            position: 'absolute', left: `${50 + tick / 2}%`,
+            top: 0, bottom: 0, width: '1px', bgcolor: '#1e2a38',
+          }} />
+        ))}
+        {/* Center marker */}
+        <Box sx={{
+          position: 'absolute', left: '50%', top: 0, bottom: 0,
+          width: '2px', bgcolor: '#2a4a6a', transform: 'translateX(-50%)',
+        }} />
+        <Typography variant="caption" sx={{ position: 'absolute', left: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.6rem' }}>L</Typography>
+        <Typography variant="caption" sx={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.6rem' }}>R</Typography>
+      </Box>
+    </Box>
+  );
+}
+
+function RudderPedals({ rudder }) {
+  const leftActive  = rudder < -0.05;
+  const rightActive = rudder >  0.05;
+
+  function pedalSx(active) {
+    return {
+      width: 52, height: 56, bgcolor: '#0a1520',
+      border: `1px solid ${active ? '#00e676' : '#1e2a38'}`,
+      borderRadius: 1,
+      boxShadow: active ? '0 0 6px #00e676' : 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transform: active ? 'translateY(4px)' : 'none',
+      transition: 'transform 0.06s, box-shadow 0.06s, border-color 0.06s',
+    };
+  }
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
+      <Box sx={pedalSx(leftActive)}>
+        <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>←</Typography>
+      </Box>
+      <Box sx={pedalSx(rightActive)}>
+        <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>→</Typography>
+      </Box>
+    </Box>
+  );
+}
+
+// ── Presentation ──────────────────────────────────────────────────────────────
 
 const C = {
   green: '#00e676',
@@ -74,13 +412,122 @@ function InstrumentLabel({ children }) {
 }
 
 function TelemetryDemo() {
-  const startRef = useRef(Date.now());
-  const [state, setState] = useState(() => sample(0));
+  const [mode, setMode]             = useState('auto');
+  const [throttle, setThrottle]     = useState(0.5);
+  const [rudder,   setRudder]       = useState(0);
+  const [autoStickPos, setAutoStickPos] = useState({ x: 0, y: 0 });
+  const startRef    = useRef(Date.now());
+  const controlsRef = useRef({ stickX: 0, stickY: 0, throttle: 0.5, rudder: 0 });
+  const keysRef     = useRef(new Set());
 
+  function handleThrottleChange(val) {
+    controlsRef.current.throttle = val;
+    setThrottle(val);
+  }
+
+  // Keyboard input + continuous rudder/throttle tick
   useEffect(() => {
-    const id = setInterval(() => setState(sample(Date.now() - startRef.current)), 100);
+    if (mode !== 'interactive') return;
+    const keysSet = keysRef.current; // stable Set — same object for lifetime of this effect
+
+    function onKeyDown(e) {
+      keysSet.add(e.key);
+      if (e.key === ' ') {
+        e.preventDefault();
+        controlsRef.current.rudder = 0;
+        setRudder(0);
+      }
+      if (e.key === 'r' || e.key === 'R') resetToAuto();
+      if ([' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) e.preventDefault();
+    }
+    function onKeyUp(e) { keysSet.delete(e.key); }
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup',   onKeyUp);
+
+    const dt = 0.05;
+    const tickId = setInterval(() => {
+      const keys = keysSet;
+
+      // Throttle — arrow up/down at 30 %/sec
+      if (keys.has('ArrowUp') || keys.has('ArrowDown')) {
+        setThrottle(prev => {
+          const dir  = keys.has('ArrowUp') ? 1 : -1;
+          const next = clamp(prev + dir * 0.30 * dt, 0, 1);
+          controlsRef.current.throttle = next;
+          return next;
+        });
+      }
+
+      // Rudder — accumulates at 40 %/sec; holds position on release; Space centres
+      setRudder(prev => {
+        const left  = keys.has('ArrowLeft');
+        const right = keys.has('ArrowRight');
+        let next;
+        if      (left  && !right) next = clamp(prev - 0.40 * dt, -1, 1);
+        else if (right && !left)  next = clamp(prev + 0.40 * dt, -1, 1);
+        else                      next = prev; // hold position
+        controlsRef.current.rudder = next;
+        return next;
+      });
+    }, 50);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup',   onKeyUp);
+      clearInterval(tickId);
+      keysSet.clear();
+    };
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // Auto-play — also drives control display positions
+  const [autoState, setAutoState] = useState(() => sample(0));
+  useEffect(() => {
+    if (mode !== 'auto') return;
+    const id = setInterval(() => {
+      const s = sample(Date.now() - startRef.current);
+      setAutoState(s);
+      // Throttle: linear map from IAS (cruise ~280 kts ≈ 60%)
+      setThrottle(clamp(0.3 + s.ias / 1000, 0, 1));
+      // Rudder: invert the steady-state relationship beta ≈ rudder × 12
+      setRudder(clamp(s.beta / 12, -1, 1));
+      // Stick: roll → puck X (right roll = right), pitch → puck Y (nose-up = down)
+      const rawX = -(s.roll  / 90) * STICK_R; // positive roll = visual left bank → puck left
+      const rawY = (s.pitch / 30) * STICK_R;
+      const dist = Math.sqrt(rawX * rawX + rawY * rawY);
+      const sc   = dist > STICK_R ? STICK_R / dist : 1;
+      setAutoStickPos({ x: rawX * sc, y: rawY * sc });
+    }, 100);
     return () => clearInterval(id);
-  }, []);
+  }, [mode]);
+
+  // Interactive physics
+  const { state: physState, reset: resetPhysics } = useFlightPhysics(controlsRef, mode === 'interactive');
+
+  const state = mode === 'auto' ? autoState : physState;
+
+  const warnings = [];
+  if (state.ias > 400)       warnings.push({ label: 'OVERSPEED', color: C.red });
+  else if (state.ias > 370)  warnings.push({ label: 'OVERSPEED', color: C.amber });
+  if (state.ias < STALL_SPEED) warnings.push({ label: 'STALL',   color: C.red });
+  if (state.g > 4.5)         warnings.push({ label: 'HIGH G',    color: C.red });
+  if (state.g < 0)           warnings.push({ label: 'NEG G',     color: C.amber });
+  if (state.alt <= 500)      warnings.push({ label: 'LOW ALT',   color: C.red });
+
+  function enterInteractive() {
+    resetPhysics();
+    setMode('interactive');
+  }
+
+  function resetToAuto() {
+    startRef.current = Date.now();
+    controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.5, rudder: 0 };
+    setThrottle(0.5);
+    setRudder(0);
+    setMode('auto');
+  }
 
   return (
     <Box sx={{ bgcolor: C.bg, border: `1px solid ${C.dim}`, borderRadius: 2, p: 2, mt: 4, maxWidth: 880, mx: 'auto' }}>
@@ -95,11 +542,31 @@ function TelemetryDemo() {
             TELEMETRY SIM
           </Typography>
         </Box>
-        <Chip
-          label={state.phase}
-          size="small"
-          sx={{ bgcolor: '#0d2137', color: '#42a5f5', border: '1px solid #1a4a6a', fontFamily: 'monospace', letterSpacing: 1, fontSize: '0.7rem' }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {/* Warning chips */}
+          {warnings.map(w => (
+            <Chip
+              key={w.label}
+              label={w.label}
+              size="small"
+              sx={{
+                bgcolor: 'transparent', color: w.color,
+                border: `1px solid ${w.color}`, fontFamily: 'monospace',
+                fontSize: '0.65rem', letterSpacing: 1,
+                animation: 'telePulse 0.75s ease-in-out infinite',
+                '@keyframes telePulse': {
+                  '0%, 100%': { opacity: 1 },
+                  '50%':      { opacity: 0.3 },
+                },
+              }}
+            />
+          ))}
+          <Chip
+            label={state.phase}
+            size="small"
+            sx={{ bgcolor: '#0d2137', color: '#42a5f5', border: '1px solid #1a4a6a', fontFamily: 'monospace', letterSpacing: 1, fontSize: '0.7rem' }}
+          />
+        </Box>
       </Box>
 
       {/* Instrument panel */}
@@ -143,14 +610,17 @@ function TelemetryDemo() {
               style={{ width: 160 }}
               fadeInAnimation={false}
             />
-            <InstrumentLabel>IAS (KTS)</InstrumentLabel>
+            <InstrumentLabel>AIRSPEED</InstrumentLabel>
+            <Typography variant="caption" sx={{ color: '#3a4a5a', fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: 1 }}>KCAS</Typography>
           </Box>
         </Stack>
 
-        {/* Center: Attitude Indicator */}
+        {/* Center: Attitude + Heading */}
         <Stack alignItems="center" spacing={1}>
           <AttitudeIndicator pitch={state.pitch} roll={state.roll} size="260px" showBox />
           <InstrumentLabel>ATTITUDE</InstrumentLabel>
+          <HeadingIndicator heading={state.heading} size="160px" showBox />
+          <InstrumentLabel>HEADING</InstrumentLabel>
         </Stack>
 
         {/* Right column: Sideslip + Altimeter */}
@@ -179,12 +649,89 @@ function TelemetryDemo() {
             <Altimeter altitude={state.alt} size="160px" showBox />
             <InstrumentLabel>ALTITUDE (FT)</InstrumentLabel>
             <Typography variant="caption" sx={{ color: '#3a4a5a', fontFamily: 'monospace', fontSize: '0.65rem' }}>
-              {state.alt.toLocaleString()}
+              {Math.round(state.alt).toLocaleString()}
             </Typography>
           </Box>
         </Stack>
 
       </Box>
+
+      {/* Mode toggle — centered, stable position */}
+      {!isMobile && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          {mode === 'auto' ? (
+            <Button
+              variant="outlined"
+              onClick={enterInteractive}
+              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, px: 3, py: 0.5 }}
+            >
+              CLICK TO TAKE CONTROL
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={resetToAuto}
+              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.amber, borderColor: C.amber, px: 3, py: 0.5 }}
+            >
+              CLICK FOR AUTOPILOT
+            </Button>
+          )}
+        </Box>
+      )}
+
+      {/* Rudder position strip chart */}
+      <Box sx={{ mt: 2 }}>
+        <RudderStripChart value={rudder} />
+        <Box sx={{ textAlign: 'center', mt: 0.25 }}>
+          <InstrumentLabel>RUDDER POS</InstrumentLabel>
+        </Box>
+      </Box>
+
+      {/* Controls — always shown on desktop */}
+      {!isMobile && (
+        <Box sx={{ mt: 3, pt: 2, borderTop: `1px solid #1e2a38` }}>
+          <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'flex-start' }}>
+            {/* Throttle */}
+            <Stack alignItems="center" spacing={1}>
+              <ThrottleControl value={throttle} onChange={handleThrottleChange} interactive={mode === 'interactive'} />
+              <InstrumentLabel>THROTTLE</InstrumentLabel>
+            </Stack>
+            {/* Stick */}
+            <Stack alignItems="center" spacing={1}>
+              <StickControl controlsRef={controlsRef} displayPos={autoStickPos} interactive={mode === 'interactive'} />
+              <InstrumentLabel>STICK</InstrumentLabel>
+            </Stack>
+            {/* Rudder pedals */}
+            <Stack alignItems="center" spacing={1}>
+              <RudderPedals rudder={rudder} />
+              <InstrumentLabel>RUDDER PEDALS</InstrumentLabel>
+            </Stack>
+          </Box>
+
+          {/* Controls legend — interactive mode only */}
+          {mode === 'interactive' && (
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{
+                display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 2, rowGap: 0.25,
+                bgcolor: '#060a0f', border: '1px solid #1e2a38', borderRadius: 1, px: 2, py: 1,
+              }}>
+                {[
+                  ['STICK',  'click + drag — pitch / roll'],
+                  ['↑ / ↓',  'throttle'],
+                  ['← / →',  'rudder'],
+                  ['SPACE',  'center rudder'],
+                  ['R',      'reset to auto'],
+                ].map(([key, desc]) => (
+                  <React.Fragment key={key}>
+                    <Typography sx={{ color: '#42a5f5', fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: 1 }}>{key}</Typography>
+                    <Typography sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>{desc}</Typography>
+                  </React.Fragment>
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Box>
+      )}
 
       {/* Footer */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
