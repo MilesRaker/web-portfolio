@@ -172,3 +172,5 @@ Cluster score for the radar = average `TIER_VALUE` across its skills (computed a
 ### 6. Migrate from Create React App to Vite
 
 Migrate from Create React App to Vite, which is the modern replacement. CRA (`react-scripts`) is abandoned by Meta and its internal dependencies carry unfixable security vulnerabilities. Vite resolves all outstanding `npm audit` issues and provides significantly faster dev startup and hot reload.
+
+### 7. Add interactive flight controls to instrumentation demo.

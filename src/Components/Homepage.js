@@ -1,6 +1,7 @@
 import { Stack, Typography } from '@mui/material';
 import React from 'react';
 import './Homepage.css';
+import TelemetryDemo from './TelemetryDemo';
 
 function Homepage() {
     return(
@@ -24,6 +25,7 @@ function Homepage() {
                 has been created using React, React-Router, and Material-UI. Source code can be found on github:
             </Typography>
                 <a href="https://github.com/MilesRaker/web-portfolio" target="_blank" rel="noreferrer">Source Code</a>
+            <TelemetryDemo />
         </Stack>
     )
 }
