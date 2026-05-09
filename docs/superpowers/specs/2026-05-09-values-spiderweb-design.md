@@ -69,6 +69,22 @@ The first spoke is the leftmost spoke for `Authentic`. Spokes are drawn clockwis
 
 Users with reduced-motion preferences should see the completed static layout without the timed draw sequence.
 
+## Rocket Toggle Animation
+
+After the initial load animation completes, the center rocket becomes an interactive toggle for collapsing and expanding the web.
+
+Clicking the rocket while the web is expanded starts the collapse sequence:
+
+1. The rocket starts spinning again.
+2. Value circles collapse to a point in the same order used for drawing: leftmost first, then clockwise.
+3. Each value circle starts collapsing `0.333s` after the previous value circle starts.
+4. Once a value circle finishes collapsing, its related spoke collapses back toward the center.
+5. After all value circles and all related spokes are gone, the rocket stops spinning.
+
+Clicking the rocket again while the web is collapsed replays the same expansion animation used on page load: rocket visible and spinning, then spokes draw from the center outward, then each value circle spawns after its spoke finishes. The rocket stops after the final value circle finishes expanding.
+
+The rocket should ignore additional toggle clicks while a collapse or expansion animation is already running, so the animation state cannot get out of sync.
+
 ## Responsive Behavior
 
 On desktop and tablet widths, the radial spiderweb remains the primary layout. Node radii, node sizes, and font sizes scale through CSS custom properties and media queries.

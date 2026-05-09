@@ -4,7 +4,7 @@
 
 **Goal:** Replace the Values accordion with an animated, interactive rocket-centered spiderweb chart.
 
-**Architecture:** `Values.js` owns value metadata and active/hover state, then renders a CSS-positioned web from that data. `Values.css` owns geometry, responsive layout, the page-load draw sequence, hover/focus states, and reduced-motion behavior.
+**Architecture:** `Values.js` owns value metadata, active/hover state, and the web animation phase, then renders a CSS-positioned web from that data. `Values.css` owns geometry, responsive layout, page-load expansion, rocket-triggered collapse/expansion, hover/focus states, and reduced-motion behavior.
 
 **Tech Stack:** React 18, Create React App, Material UI Typography, CSS custom properties, React Testing Library.
 
@@ -13,8 +13,8 @@
 ## File Structure
 
 - Modify: `src/Components/Values.js` - replace accordion markup with metadata-driven web rendering and click/hover state.
-- Modify: `src/Components/Values.css` - replace accordion styles with web layout, animations, responsive rules, and reduced-motion rules.
-- Create: `src/Components/Values.test.js` - cover rendering and click-toggle behavior.
+- Modify: `src/Components/Values.css` - replace accordion styles with web layout, animations, rocket-toggle animations, responsive rules, and reduced-motion rules.
+- Create: `src/Components/Values.test.js` - cover rendering, value click-toggle behavior, and rocket collapse/expand behavior.
 - Keep: `docs/superpowers/specs/2026-05-09-values-spiderweb-design.md` - approved design source.
 
 ### Task 1: Values Interaction Tests
@@ -227,3 +227,42 @@ Expected: PASS with `Compiled successfully.`
 Run: `git status --short`
 
 Expected: modified Values files, new Values test, and the plan file. Existing unstaged `.claude/agents/*.md` deletions may still be present from earlier cleanup and should not be reverted.
+
+### Task 5: Rocket Collapse/Expand Toggle
+
+**Files:**
+- Modify: `src/Components/Values.js`
+- Modify: `src/Components/Values.css`
+- Modify: `src/Components/Values.test.js`
+
+- [ ] **Step 1: Add animation phase state**
+
+Add `webPhase` state in `Values.js` with four values: `expanding`, `expanded`, `collapsing`, and `collapsed`. Initialize to `expanding`, transition to `expanded` after the page-load animation duration, transition to `collapsed` after the collapse duration, and ignore rocket clicks while `expanding` or `collapsing`.
+
+- [ ] **Step 2: Make rocket an accessible button**
+
+Replace the non-interactive center rocket wrapper with a button. Use `aria-label="Collapse values web"` when expanded, `aria-label="Expand values web"` when collapsed, and `aria-label="Values web animation in progress"` while an animation is running.
+
+- [ ] **Step 3: Add collapse CSS**
+
+Add CSS phase classes on `.valuesWeb`:
+
+- `.isExpanding` replays the original page-load sequence.
+- `.isExpanded` shows all spokes and value nodes at rest.
+- `.isCollapsing` collapses value nodes from leftmost clockwise, then collapses each spoke back to center after its node finishes.
+- `.isCollapsed` hides all spokes and nodes.
+
+- [ ] **Step 4: Add rocket toggle tests**
+
+Test that the rocket starts with the animation-in-progress label, changes to `Collapse values web` after the expansion duration, enters the collapsing class when clicked, changes to `Expand values web` after the collapse duration, then enters the expanding class when clicked again.
+
+- [ ] **Step 5: Run verification**
+
+Run:
+
+```bash
+npm.cmd test -- --watchAll=false --runTestsByPath src/Components/Values.test.js
+npm.cmd run build
+```
+
+Expected: focused Values tests pass and the production build completes. Existing unrelated warnings may remain.

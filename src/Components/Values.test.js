@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Values from './Values';
 
@@ -10,6 +10,10 @@ const definitions = {
   Playful: 'Bringing energy, humor, and creativity into the work.',
   'Self-confident': 'Trusting that I can learn what the mission requires.',
 };
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 test('renders all value names', () => {
   render(<Values />);
@@ -48,4 +52,43 @@ test('clicking another value moves the expanded definition', async () => {
 
   expect(screen.queryByText(definitions.Authentic)).not.toBeInTheDocument();
   expect(screen.getByText(definitions.Curious)).toBeInTheDocument();
+});
+
+test('rocket toggles the web between collapsed and expanded phases', () => {
+  jest.useFakeTimers();
+  render(<Values />);
+
+  const web = screen.getByLabelText('Personal values spiderweb chart');
+  expect(web).toHaveClass('isExpanding');
+  expect(screen.getByRole('button', { name: 'Values web animation in progress' })).toBeDisabled();
+
+  act(() => {
+    jest.advanceTimersByTime(3515);
+  });
+
+  const collapseButton = screen.getByRole('button', { name: 'Collapse values web' });
+  expect(web).toHaveClass('isExpanded');
+  expect(collapseButton).not.toBeDisabled();
+
+  fireEvent.click(collapseButton);
+  expect(web).toHaveClass('isCollapsing');
+  expect(screen.getByRole('button', { name: 'Values web animation in progress' })).toBeDisabled();
+
+  act(() => {
+    jest.advanceTimersByTime(3015);
+  });
+
+  const expandButton = screen.getByRole('button', { name: 'Expand values web' });
+  expect(web).toHaveClass('isCollapsed');
+  expect(expandButton).not.toBeDisabled();
+
+  fireEvent.click(expandButton);
+  expect(web).toHaveClass('isExpanding');
+
+  act(() => {
+    jest.advanceTimersByTime(3515);
+  });
+
+  expect(web).toHaveClass('isExpanded');
+  expect(screen.getByRole('button', { name: 'Collapse values web' })).not.toBeDisabled();
 });
