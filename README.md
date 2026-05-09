@@ -1,70 +1,107 @@
-# Getting Started with Create React App
+# MilesRaker.com — Portfolio Website
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Personal portfolio for [Miles Raker](https://milesraker.com). Built with React, React Router v6, and Material UI v5.
 
-## Available Scripts
+## Dev Setup
 
-In the project directory, you can run:
+```bash
+npm install
+npm start       # http://localhost:3000
+npm run build   # production build → /build
+```
 
-### `npm start`
+## Project Structure
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+src/Components/
+├── Router.js               Route definitions and layout wrapper
+├── TopBar.js               Responsive header (class component, manages resize events)
+├── NavTabsHorizontal.js    Desktop nav tabs (>725px)
+├── NavTabsVertical.js      Mobile nav tabs (<725px)
+├── ThemeProvider.js        MUI custom theme (gray primary, blue secondary #42a5f5)
+├── Homepage.js             Landing page
+├── Resume.js               Resume page
+├── Values.js               Personal values — MUI Accordion
+└── Projects.js             Projects showcase
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Current Pages
 
-### `npm test`
+| Route | Status | Description |
+|---|---|---|
+| `/` | Done | Landing page with intro and links |
+| `/resume` | In progress | Interactive resume (see Roadmap) |
+| `/values` | Done | Six personal values in accordion layout |
+| `/projects` | In progress | Project showcase cards (see Roadmap) |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Roadmap — 2026 Refresh
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Context: updating the portfolio for a job search targeting avionics/embedded roles. Priority order below.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 1. Interactive Resume Page
 
-### `npm run eject`
+**Goal:** Replace the static PNG with a properly rendered, interactive resume.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+**Approach:**
+- Resume source of truth is a Markdown file maintained separately (`Miles Raker Resume 2026 DRAFT.md`)
+- Parse the Markdown in React (using `react-markdown` or a lightweight custom parser) and render it as a styled component that matches the existing MUI theme
+- Drop the PDF output from `build_resume.py` into `public/resume.pdf` and add a Download button
+- No separate data source to maintain — the Markdown file drives both the PDF and the web view
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+**What "interactive" means here:**
+- Working hyperlinks (LinkedIn, GitHub)
+- Responsive layout (readable on mobile)
+- Skills section rendered as tag chips
+- Download PDF button in the header
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 2. Projects Page
 
-## Learn More
+**Goal:** Showcase 4–6 projects with cards linking to detail views or external repos.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**Projects to include (in priority order):**
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+| Project | Tech | Notes |
+|---|---|---|
+| Vanguard Instrumentation System | Python, Curtiss-Wright/IADS, sensor selection | Crewed tech demonstrator; Northrop Grumman publicly announced |
+| Landing Gear & Fuel Control Systems | Relay logic, fabrication, validation | Clean-sheet design, 18-month program |
+| Deimos/Phobos Fuel Controller Redesign | Altium (PCB), Arduino/Python, custom test rig | Embedded redesign + acceptance test |
+| IADS Parameter Management Tool | C# | Internal tooling for managing 2,500+ telemetry parameters |
+| Python Network Test Suite | Python | Custom validation software for payload network integration |
+| Washington Vets2Tech Hiring Portal | React.js | Public intern project; GitHub-linked |
 
-### Code Splitting
+**Card structure:** Title · 2–3 sentence description · tech tag list · optional link
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**Sensitivity note:** Do not reference the unacknowledged classified network program by name or as a project card. Resume bullet is appropriate; featured project card is not.
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 3. Skills Visualization
 
-### Making a Progressive Web App
+**Goal:** Show breadth across disciplines visually — unusual for a portfolio and relevant for avionics/systems roles.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+**Approach:** Radar chart or grouped bar using `recharts`, grouped by discipline cluster:
+- Instrumentation & Flight Test
+- Electrical Engineering
+- Networking & Protocols
+- Software & Programming
+- Systems / Program Management
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### 4. Telemetry Demo (Stretch Goal)
 
-### Deployment
+**Goal:** A real-time simulated aircraft parameter display — differentiating for avionics/embedded roles.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**Approach:** Fake sensor feed (altitude, airspeed, sideslip angle, g-load) scrolling in real time using `recharts`. Mimics the kind of IADS display built and operated in the day job. Even a simple version is a genuine conversation starter in avionics interviews.
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 5. Migrate from Create React App to Vite
+
+Migrate from Create React App to Vite, which is the modern replacement. CRA (`react-scripts`) is abandoned by Meta and its internal dependencies carry unfixable security vulnerabilities. Vite resolves all outstanding `npm audit` issues and provides significantly faster dev startup and hot reload.
