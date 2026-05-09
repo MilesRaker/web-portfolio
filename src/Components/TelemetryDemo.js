@@ -3,7 +3,6 @@ import { Box, Button, Typography, Chip, Stack, useMediaQuery } from '@mui/materi
 import { AttitudeIndicator, Altimeter, HeadingIndicator } from 'react-typescript-flight-indicators';
 import GaugeComponent from 'react-gauge-component';
 
-// Full-circuit profile: runway → takeoff → climb → flight test → descent → landing → stop
 const SCRIPT = [
   // ── Takeoff roll ──────────────────────────────────────────────────────────
   { t:  0, pitch:  0, roll:  0, ias:   0, alt:     0, g: 1.0, beta:  0, heading:  0, throttle: 0.05, phase: 'On Runway' },
@@ -72,10 +71,10 @@ function sample(elapsedMs) {
     roll:     lerp(a.roll,  b.roll,  alpha),
     ias:      Math.round(lerp(a.ias, b.ias, alpha)),
     alt:      Math.round(lerp(a.alt, b.alt, alpha)),
-    g:        parseFloat(lerp(a.g, b.g, alpha).toFixed(2)),
-    beta:     parseFloat(lerp(a.beta, b.beta, alpha).toFixed(1)),
-    heading:  parseFloat(lerp(a.heading, b.heading, alpha).toFixed(1)),
-    throttle: parseFloat(lerp(a.throttle, b.throttle, alpha).toFixed(2)),
+    g:        Math.round(lerp(a.g, b.g, alpha) * 100) / 100,
+    beta:     Math.round(lerp(a.beta, b.beta, alpha) * 10) / 10,
+    heading:  Math.round(lerp(a.heading, b.heading, alpha) * 10) / 10,
+    throttle: Math.round(lerp(a.throttle, b.throttle, alpha) * 100) / 100,
     phase:    a.phase,
   };
 }
@@ -367,7 +366,7 @@ function ThrottleControl({ value, onChange, interactive }) {
           }}
         />
       </Box>
-      <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>
+      <Typography variant="caption" sx={{ color: '#b8c8d8', ...MONO, fontSize: '0.65rem' }}>
         {Math.round(value * 100)}%
       </Typography>
     </Box>
@@ -406,8 +405,8 @@ function RudderStripChart({ value }) {
           position: 'absolute', left: '50%', top: 0, bottom: 0,
           width: '2px', bgcolor: '#2a4a6a', transform: 'translateX(-50%)',
         }} />
-        <Typography variant="caption" sx={{ position: 'absolute', left: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.6rem' }}>L</Typography>
-        <Typography variant="caption" sx={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.6rem' }}>R</Typography>
+        <Typography variant="caption" sx={{ position: 'absolute', left: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', ...MONO, fontSize: '0.6rem' }}>L</Typography>
+        <Typography variant="caption" sx={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', color: '#b8c8d8', ...MONO, fontSize: '0.6rem' }}>R</Typography>
       </Box>
     </Box>
   );
@@ -432,10 +431,10 @@ function RudderPedals({ rudder }) {
   return (
     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
       <Box sx={pedalSx(leftActive)}>
-        <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>←</Typography>
+        <Typography variant="caption" sx={{ color: '#b8c8d8', ...MONO, fontSize: '0.65rem' }}>←</Typography>
       </Box>
       <Box sx={pedalSx(rightActive)}>
-        <Typography variant="caption" sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>→</Typography>
+        <Typography variant="caption" sx={{ color: '#b8c8d8', ...MONO, fontSize: '0.65rem' }}>→</Typography>
       </Box>
     </Box>
   );
@@ -452,6 +451,16 @@ const C = {
   text:  '#b8c8d8',
 };
 
+const MONO = { fontFamily: 'monospace' };
+
+const MODE = { AUTO: 'auto', INTERACTIVE: 'interactive', RETURNING: 'returning' };
+
+const LANDING_COPY = {
+  landed:  { title: 'NICE! YOU LANDED SAFELY',  body: 'Throttle to zero and stopped before the runway end. Great job!' },
+  crashed: { title: 'WHOOPS! YOU CRASHED',       body: 'Touch down within 5 KIAS of stall speed with 1–4° nose-up pitch next time.' },
+  overrun: { title: 'WHOOPS! RUNWAY OVERRUN',    body: 'You ran off the end of the runway! Cut throttle immediately after touchdown.' },
+};
+
 const POINTER = {
   type: 'needle',
   color: '#e0e0e0',
@@ -463,14 +472,14 @@ const POINTER = {
 
 function InstrumentLabel({ children }) {
   return (
-    <Typography variant="caption" sx={{ color: C.text, fontFamily: 'monospace', letterSpacing: 1, mt: -0.5 }}>
+    <Typography variant="caption" sx={{ color: C.text, ...MONO, letterSpacing: 1, mt: -0.5 }}>
       {children}
     </Typography>
   );
 }
 
 function TelemetryDemo() {
-  const [mode, setMode]             = useState('auto');
+  const [mode, setMode]             = useState(MODE.AUTO);
   const [throttle, setThrottle]     = useState(0.5);
   const [rudder,   setRudder]       = useState(0);
   const [autoStickPos, setAutoStickPos] = useState({ x: 0, y: 0 });
@@ -488,9 +497,8 @@ function TelemetryDemo() {
     setThrottle(val);
   }
 
-  // Keyboard input + continuous rudder/throttle tick
   useEffect(() => {
-    if (mode !== 'interactive') return;
+    if (mode !== MODE.INTERACTIVE) return;
     const keysSet = keysRef.current; // stable Set — same object for lifetime of this effect
 
     function onKeyDown(e) {
@@ -548,7 +556,7 @@ function TelemetryDemo() {
   // Auto-play — also drives control display positions
   const [autoState, setAutoState] = useState(() => sample(0));
   useEffect(() => {
-    if (mode !== 'auto') return;
+    if (mode !== MODE.AUTO) return;
     const id = setInterval(() => {
       const s = sample(Date.now() - startRef.current);
       setAutoState(s);
@@ -565,14 +573,13 @@ function TelemetryDemo() {
     return () => clearInterval(id);
   }, [mode]);
 
-  // Interactive and returning modes both run physics; pause in terminal landing states
-  const physicsActive = (mode === 'interactive' || mode === 'returning') &&
+  const physicsActive = (mode === MODE.INTERACTIVE || mode === MODE.RETURNING) &&
                         (landingResult === null || landingResult === 'rolling');
   const { state: physState, stateRef: physStateRef, reset: resetPhysics } = useFlightPhysics(controlsRef, physicsActive);
 
   // Touchdown detection
   useEffect(() => {
-    if (mode !== 'interactive' || landingResult !== null) {
+    if (mode !== MODE.INTERACTIVE || landingResult !== null) {
       prevAltRef.current = physState.alt;
       return;
     }
@@ -631,23 +638,26 @@ function TelemetryDemo() {
       const nearOver  = s.ias > 360;
 
       if (nearStall) {
-        stickY = clamp(stickY, -1, -0.2); // pitch down to recover airspeed first
+        stickY = clamp(stickY, -1, -0.2);
         newThrottle = 0.90;
       } else if (tooLow) {
-        stickY = Math.max(stickY, 0.5);   // climb away from terrain
+        stickY = Math.max(stickY, 0.5);
         newThrottle = Math.max(newThrottle, 0.75);
       }
       if (nearOver) {
         newThrottle = Math.min(newThrottle, 0.15);
-        stickY = Math.max(stickY, 0.3);   // gentle pull-up to shed speed
+        stickY = Math.max(stickY, 0.3);
       }
 
       controlsRef.current = { stickX, stickY, throttle: newThrottle, rudder: 0 };
       setThrottle(newThrottle);
-      setRudder(0);
-      setAutoStickPos({ x: -stickX * STICK_R, y: stickY * STICK_R });
+      setRudder(prev => prev !== 0 ? 0 : prev);
+      setAutoStickPos(prev => {
+        const nx = -stickX * STICK_R;
+        const ny =  stickY * STICK_R;
+        return (prev.x === nx && prev.y === ny) ? prev : { x: nx, y: ny };
+      });
 
-      // Converge within 10% of target values
       const altTol = Math.max(target.alt * 0.10, 200);
       const iasTol = Math.max(target.ias * 0.10, 10);
       const converged =
@@ -656,23 +666,18 @@ function TelemetryDemo() {
         Math.abs(s.roll)  < 10;
 
       if (converged) {
-        // Resume script from where user handed off
         startRef.current = Date.now() - takeoverOffsetRef.current;
-        setMode('auto');
+        setMode(MODE.AUTO);
       } else if (Date.now() > deadline) {
-        // Took too long — restart from the beginning of the takeoff roll
-        startRef.current = Date.now();
-        controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.05, rudder: 0 };
-        setThrottle(0.05);
-        setRudder(0);
-        setMode('auto');
+        restartFromGround();
       }
     }, 100);
 
     return () => clearInterval(id);
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const state = mode === 'auto' ? autoState : physState;
+  const state      = mode === MODE.AUTO ? autoState : physState;
+  const landingCopy = LANDING_COPY[landingResult] ?? null;
 
   const warnings = [];
   if (state.ias > 400)                           warnings.push({ label: 'OVERSPEED', color: C.red });
@@ -683,9 +688,9 @@ function TelemetryDemo() {
   if (state.alt <= 500 && state.alt > 0)         warnings.push({ label: 'LOW ALT',   color: C.red });
 
   function enterInteractive() {
-    if (mode === 'returning') {
+    if (mode === MODE.RETURNING) {
       // Physics is already live at the right state — just hand control to the user
-      setMode('interactive');
+      setMode(MODE.INTERACTIVE);
       return;
     }
     // From auto: seed physics from the current auto state so instruments don't jump
@@ -707,30 +712,28 @@ function TelemetryDemo() {
     controlsRef.current = { stickX: 0, stickY: 0, throttle: autoState.throttle, rudder: initRudder };
     setThrottle(autoState.throttle);
     setRudder(initRudder);
-    setMode('interactive');
+    setMode(MODE.INTERACTIVE);
+  }
+
+  function restartFromGround() {
+    startRef.current = Date.now();
+    controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.05, rudder: 0 };
+    setThrottle(0.05);
+    setRudder(0);
+    setLandingResult(null);
+    setRollTimeLeft(30);
+    setMode(MODE.AUTO);
   }
 
   function resetToAuto() {
     if (physState.alt > 0) {
-      // Airborne: fly back to script conditions before resuming the test profile
       returningTargetRef.current = sample(takeoverOffsetRef.current);
       setLandingResult(null);
       setRollTimeLeft(30);
-      setMode('returning');
+      setMode(MODE.RETURNING);
     } else {
-      // On ground: restart the full circuit from t=0
-      startRef.current = Date.now();
-      controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.05, rudder: 0 };
-      setThrottle(0.05);
-      setRudder(0);
-      setLandingResult(null);
-      setRollTimeLeft(30);
-      setMode('auto');
+      restartFromGround();
     }
-  }
-
-  function resetFromLanding() {
-    resetToAuto();
   }
 
   return (
@@ -742,7 +745,7 @@ function TelemetryDemo() {
             width: 8, height: 8, borderRadius: '50%',
             bgcolor: C.green, boxShadow: `0 0 6px ${C.green}`, flexShrink: 0,
           }} />
-          <Typography variant="caption" sx={{ color: C.text, letterSpacing: 2, fontFamily: 'monospace', fontSize: '0.75rem' }}>
+          <Typography variant="caption" sx={{ color: C.text, letterSpacing: 2, ...MONO, fontSize: '0.75rem' }}>
             TELEMETRY SIM
           </Typography>
         </Box>
@@ -755,7 +758,7 @@ function TelemetryDemo() {
               size="small"
               sx={{
                 bgcolor: 'transparent', color: w.color,
-                border: `1px solid ${w.color}`, fontFamily: 'monospace',
+                border: `1px solid ${w.color}`, ...MONO,
                 fontSize: '0.65rem', letterSpacing: 1,
                 animation: 'telePulse 0.75s ease-in-out infinite',
                 '@keyframes telePulse': {
@@ -768,7 +771,7 @@ function TelemetryDemo() {
           <Chip
             label={state.phase}
             size="small"
-            sx={{ bgcolor: '#0d2137', color: '#42a5f5', border: '1px solid #1a4a6a', fontFamily: 'monospace', letterSpacing: 1, fontSize: '0.7rem' }}
+            sx={{ bgcolor: '#0d2137', color: '#42a5f5', border: '1px solid #1a4a6a', ...MONO, letterSpacing: 1, fontSize: '0.7rem' }}
           />
         </Box>
       </Box>
@@ -779,12 +782,12 @@ function TelemetryDemo() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2,
           bgcolor: '#0d1a0d', border: `1px solid ${C.amber}`, borderRadius: 1, px: 2, py: 1,
         }}>
-          <Typography sx={{ color: C.amber, fontFamily: 'monospace', fontSize: '0.8rem', letterSpacing: 2 }}>
+          <Typography sx={{ color: C.amber, ...MONO, fontSize: '0.8rem', letterSpacing: 2 }}>
             GROUND ROLL — CUT THROTTLE TO STOP
           </Typography>
           <Typography sx={{
             color: rollTimeLeft < 10 ? C.red : C.amber,
-            fontFamily: 'monospace', fontSize: '1rem', letterSpacing: 2, fontWeight: 700,
+            ...MONO, fontSize: '1rem', letterSpacing: 2, fontWeight: 700,
             ...(rollTimeLeft < 10 && { animation: 'telePulse 0.5s ease-in-out infinite' }),
           }}>
             {Math.ceil(rollTimeLeft)}s
@@ -835,7 +838,7 @@ function TelemetryDemo() {
               fadeInAnimation={false}
             />
             <InstrumentLabel>AIRSPEED</InstrumentLabel>
-            <Typography variant="caption" sx={{ color: '#3a4a5a', fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
+            <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
           </Box>
         </Stack>
 
@@ -869,10 +872,10 @@ function TelemetryDemo() {
           />
           <InstrumentLabel>SIDESLIP β</InstrumentLabel>
 
-          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ mt: 2 }}>
             <Altimeter altitude={state.alt} size="160px" showBox />
             <InstrumentLabel>ALTITUDE (FT AGL)</InstrumentLabel>
-            <Typography variant="caption" sx={{ color: '#3a4a5a', fontFamily: 'monospace', fontSize: '0.65rem' }}>
+            <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem' }}>
               {Math.round(state.alt).toLocaleString()}
             </Typography>
           </Box>
@@ -883,18 +886,18 @@ function TelemetryDemo() {
       {/* Mode toggle — centered, stable position */}
       {!isMobile && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          {mode === 'auto' ? (
+          {mode === MODE.AUTO ? (
             <Button
               variant="outlined"
               onClick={enterInteractive}
-              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, px: 3, py: 0.5 }}
+              sx={{ ...MONO, fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, px: 3, py: 0.5 }}
             >
               CLICK TO TAKE CONTROL
             </Button>
-          ) : mode === 'returning' ? (
+          ) : mode === MODE.RETURNING ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
               <Typography sx={{
-                color: C.amber, fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 2,
+                color: C.amber, ...MONO, fontSize: '0.7rem', letterSpacing: 2,
                 animation: 'telePulse 1s ease-in-out infinite',
                 '@keyframes telePulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
               }}>
@@ -903,7 +906,7 @@ function TelemetryDemo() {
               <Button
                 variant="outlined"
                 onClick={enterInteractive}
-                sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, px: 3, py: 0.5 }}
+                sx={{ ...MONO, fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, px: 3, py: 0.5 }}
               >
                 TAKE CONTROL
               </Button>
@@ -912,7 +915,7 @@ function TelemetryDemo() {
             <Button
               variant="outlined"
               onClick={resetToAuto}
-              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.amber, borderColor: C.amber, px: 3, py: 0.5 }}
+              sx={{ ...MONO, fontSize: '0.7rem', letterSpacing: 1, color: C.amber, borderColor: C.amber, px: 3, py: 0.5 }}
             >
               CLICK FOR AUTOPILOT
             </Button>
@@ -934,12 +937,12 @@ function TelemetryDemo() {
           <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'flex-start' }}>
             {/* Throttle */}
             <Stack alignItems="center" spacing={1}>
-              <ThrottleControl value={throttle} onChange={handleThrottleChange} interactive={mode === 'interactive'} />
+              <ThrottleControl value={throttle} onChange={handleThrottleChange} interactive={mode === MODE.INTERACTIVE} />
               <InstrumentLabel>THROTTLE</InstrumentLabel>
             </Stack>
             {/* Stick */}
             <Stack alignItems="center" spacing={1}>
-              <StickControl controlsRef={controlsRef} displayPos={autoStickPos} interactive={mode === 'interactive'} />
+              <StickControl controlsRef={controlsRef} displayPos={autoStickPos} interactive={mode === MODE.INTERACTIVE} />
               <InstrumentLabel>STICK</InstrumentLabel>
             </Stack>
             {/* Rudder pedals */}
@@ -950,7 +953,7 @@ function TelemetryDemo() {
           </Box>
 
           {/* Controls legend — interactive mode only */}
-          {mode === 'interactive' && (
+          {mode === MODE.INTERACTIVE && (
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
               <Box sx={{
                 display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 2, rowGap: 0.25,
@@ -964,8 +967,8 @@ function TelemetryDemo() {
                   ['R',      'reset to auto'],
                 ].map(([key, desc]) => (
                   <React.Fragment key={key}>
-                    <Typography sx={{ color: '#42a5f5', fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: 1 }}>{key}</Typography>
-                    <Typography sx={{ color: '#b8c8d8', fontFamily: 'monospace', fontSize: '0.65rem' }}>{desc}</Typography>
+                    <Typography sx={{ color: '#42a5f5', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>{key}</Typography>
+                    <Typography sx={{ color: '#b8c8d8', ...MONO, fontSize: '0.65rem' }}>{desc}</Typography>
                   </React.Fragment>
                 ))}
               </Box>
@@ -976,13 +979,13 @@ function TelemetryDemo() {
 
       {/* Footer */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
-        <Typography sx={{ color: '#2a3a4a', fontFamily: 'monospace', fontSize: '0.6rem', letterSpacing: 1 }}>
+        <Typography sx={{ color: '#2a3a4a', ...MONO, fontSize: '0.6rem', letterSpacing: 1 }}>
           SIMULATED — NOT REPRESENTATIVE OF ACTUAL VEHICLE
         </Typography>
       </Box>
 
       {/* Landing outcome overlay */}
-      {landingResult && landingResult !== 'rolling' && (
+      {landingCopy && (
         <Box sx={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           bgcolor: 'rgba(8,12,18,0.92)', borderRadius: 2, zIndex: 10,
@@ -990,21 +993,17 @@ function TelemetryDemo() {
           <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', p: 3 }}>
             <Typography sx={{
               color: landingResult === 'landed' ? C.green : C.red,
-              fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: 3, fontWeight: 700,
+              ...MONO, fontSize: '1.2rem', letterSpacing: 3, fontWeight: 700,
             }}>
-              {landingResult === 'landed'  && 'NICE! YOU LANDED SAFELY'}
-              {landingResult === 'crashed' && 'WHOOPS! YOU CRASHED'}
-              {landingResult === 'overrun' && 'WHOOPS! RUNWAY OVERRUN'}
+              {landingCopy.title}
             </Typography>
-            <Typography sx={{ color: C.text, fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 360, lineHeight: 1.6 }}>
-              {landingResult === 'landed'  && 'Throttle to zero and stopped before the runway end. Great job!'}
-              {landingResult === 'crashed' && 'Touch down within 5 KCAS of stall speed with 1–4° nose-up pitch next time.'}
-              {landingResult === 'overrun' && "You ran off the end of the runway! Cut throttle immediately after touchdown."}
+            <Typography sx={{ color: C.text, ...MONO, fontSize: '0.78rem', maxWidth: 360, lineHeight: 1.6 }}>
+              {landingCopy.body}
             </Typography>
             <Button
               variant="outlined"
-              onClick={resetFromLanding}
-              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, mt: 1 }}
+              onClick={resetToAuto}
+              sx={{ ...MONO, fontSize: '0.7rem', letterSpacing: 1, color: C.green, borderColor: C.green, mt: 1 }}
             >
               RESET SIM
             </Button>
