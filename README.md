@@ -85,12 +85,73 @@ Context: updating the portfolio for a job search targeting avionics/embedded rol
 
 **Goal:** Show breadth across disciplines visually — unusual for a portfolio and relevant for avionics/systems roles.
 
-**Approach:** Radar chart or grouped bar using `recharts`, grouped by discipline cluster:
-- Instrumentation & Flight Test
-- Electrical Engineering
-- Networking & Protocols
-- Software & Programming
-- Systems / Program Management
+**Placement:** Embedded section at the bottom of the Resume page (`/resume`) — skills read in context with the work history that built them, no extra nav item needed.
+
+**Chart type:** Radar chart (cluster-level overview) + expandable per-skill breakdown on click.
+- Radar gives the at-a-glance "shape of expertise" recruiters remember
+- Click a cluster axis → inline horizontal bar chart of individual skills with tier labels
+- Mobile fallback: drop the radar; render a flat grouped bar chart (radar is illegible at narrow widths)
+
+**Skill tiers (proficiency, not numeric):**
+
+| Tier | Meaning |
+|---|---|
+| Familiar | Have used it; understand fundamentals; not a daily tool |
+| Proficient | Comfortable; have delivered real work with it |
+| Advanced | A go-to tool; have trained others or led efforts with it |
+| Expert | Deep domain authority; have designed systems around it |
+
+Tiers map to values `1–4` internally for chart sizing; labels surface in tooltips and the bar breakdown.
+
+**Discipline clusters and skills:**
+
+| Cluster | Skill | Tier |
+|---|---|---|
+| Instrumentation & Flight Test | IADS / Curtiss-Wright | Advanced |
+| | Sensor selection & integration | Advanced |
+| | Data acquisition systems | Advanced |
+| | Telemetry system design | Proficient |
+| | Flight test execution | Proficient |
+| Electrical Engineering | Relay / discrete logic | Advanced |
+| | Circuit analysis | Advanced |
+| | PCB design (Altium) | Proficient |
+| | Power distribution | Proficient |
+| | Fabrication & validation | Proficient |
+| Networking & Protocols | Payload network integration | Advanced |
+| | Ethernet / IP | Proficient |
+| | Protocol analysis & testing | Proficient |
+| Software & Programming | Python | Advanced |
+| | C# | Proficient |
+| | JavaScript / React | Proficient |
+| | Arduino / embedded C | Familiar |
+| | MATLAB | Familiar |
+| Systems / Program Management | T&E planning & execution | Advanced |
+| | Technical documentation | Advanced |
+| | Cross-functional coordination | Proficient |
+| | Requirements development | Proficient |
+
+**Data model (in-component, no external file):**
+
+```js
+const SKILLS = [
+  { name: "IADS / Curtiss-Wright", cluster: "Instrumentation & Flight Test", tier: "Advanced" },
+  // ...
+];
+
+const TIER_VALUE = { Familiar: 1, Proficient: 2, Advanced: 3, Expert: 4 };
+```
+
+Cluster score for the radar = average `TIER_VALUE` across its skills (computed at render time).
+
+**UX behavior:**
+- Default: radar with five axes; each axis label shows cluster name + average tier label
+- Hover: tooltip listing individual skills and their tiers
+- Click cluster: expands a horizontal bar chart below (or as a popover on desktop) with per-skill bars colored by tier
+- Active cluster is highlighted on the radar while expanded
+
+**Component:** `src/Components/Skills.js` — imported and rendered inside `Resume.js` beneath the education section.
+
+**Sensitivity note:** Do not include any skill names that could imply knowledge of undisclosed programs or classified systems.
 
 ---
 
@@ -102,6 +163,12 @@ Context: updating the portfolio for a job search targeting avionics/embedded rol
 
 ---
 
-### 5. Migrate from Create React App to Vite
+### 5. Update Landing Page
+
+**Goal:** Refresh the homepage to reflect the current job search and set the tone for avionics/embedded roles.
+
+---
+
+### 6. Migrate from Create React App to Vite
 
 Migrate from Create React App to Vite, which is the modern replacement. CRA (`react-scripts`) is abandoned by Meta and its internal dependencies carry unfixable security vulnerabilities. Vite resolves all outstanding `npm audit` issues and provides significantly faster dev startup and hot reload.
