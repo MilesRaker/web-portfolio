@@ -23,8 +23,8 @@ function Homepage() {
             </Typography>
             <Typography variant='body1'>
                 The simulated display below is a compact example of the real-time instrumentation display views used during
-                flight test. It is here to show the kind of live engineering interface I design and operate, not to
-                document every control in the module.
+                flight test. It highlights the kind of live engineering interface I design and operate when complex
+                aircraft data needs to be monitored in real time.
             </Typography>
             <a href="https://github.com/MilesRaker/web-portfolio" target="_blank" rel="noreferrer">Source Code</a>
             <TelemetryDemo />
