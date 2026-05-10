@@ -7,26 +7,24 @@ function Homepage() {
     return(
         <Stack className='homepageContainer'>
             <Typography variant='h2'>
-                Miles Raker
+                Flight Test Systems, Instrumentation, and Full-Stack Tools
             </Typography>
-            <Typography variant='h5' color="secondary">
-                Design Engineer | Aerospace Electrical Engineer | Active Secret Clearance
-            </Typography>
-            <Typography variant='body1'>
-                I design and build experimental aircraft systems at Scaled Composites — one of the most prolific
-                experimental aircraft developers in the world. My work spans the full electrical stack: instrumentation
-                systems, power distribution, control systems, payload networks, and embedded hardware. Company subject
-                matter expert on flight test instrumentation, with hands-on experience across 20+ programs and 50+
-                flight tests. I combine rigorous EE depth with full-stack software capability to deliver complete,
-                end-to-end solutions.
-            </Typography>
-            <Typography variant='h5' color="secondary">
-                About This Site
+            <Typography variant='h5' color='secondary' component='p'>
+                I build electrical systems, data tools, and real-time displays for experimental aircraft programs.
             </Typography>
             <Typography variant='body1'>
-                Built with React, React Router, and Material UI. The telemetry demo below is a simulated aircraft
-                parameter display — the kind of real-time instrumentation view I design and operate in flight test.
-                Source code on GitHub:
+                My work sits where aircraft hardware, flight test data, and software tooling meet: instrumentation,
+                power distribution, control systems, payload networks, embedded hardware, and the applications that
+                make complex test data usable. I bring aerospace electrical engineering depth and full-stack software
+                capability to deliver complete, end-to-end systems.
+            </Typography>
+            <Typography variant='h5' color='secondary' component='h3'>
+                Telemetry Demo
+            </Typography>
+            <Typography variant='body1'>
+                The simulated display below is a compact example of the real-time instrumentation display views used during
+                flight test. It is here to show the kind of live engineering interface I design and operate, not to
+                document every control in the module.
             </Typography>
             <a href="https://github.com/MilesRaker/web-portfolio" target="_blank" rel="noreferrer">Source Code</a>
             <TelemetryDemo />
