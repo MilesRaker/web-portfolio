@@ -46,19 +46,6 @@ const PROJECTS = [
     tech: ['Altium Designer', 'PCB Design', 'Arduino', 'Python', 'Embedded Systems'],
   },
   {
-    title: 'IADS Parameter Management Tool',
-    summary:
-      'Internal C# desktop application for managing over 2,500 telemetry parameters across multiple IADS ' +
-      'flight test databases. Cut manual parameter entry time and eliminated a class of configuration ' +
-      'errors across programs.',
-    detail:
-      'Built a C# application to manage the full parameter lifecycle in Curtiss-Wright IADS — importing ' +
-      'from instrumentation lists, diffing against existing databases, flagging conflicts, and exporting ' +
-      'validated configurations. Handled naming conventions, unit conversions, and multi-program ' +
-      'edge cases that previously required manual reconciliation.',
-    tech: ['C#', 'Curtiss-Wright IADS', 'Desktop Application', 'Flight Test'],
-  },
-  {
     title: 'Python Network Test Suite',
     summary:
       'Custom Python framework for validating payload network integration on aircraft systems. ' +
