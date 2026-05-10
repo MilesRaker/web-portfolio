@@ -191,7 +191,6 @@ function useFlightPhysics(controlsRef, active) {
   const physRef = useRef({ ...INIT_PHYSICS });
   const [state, setState] = useState(() => ({ ...INIT_PHYSICS, phase: computePhase(INIT_PHYSICS) }));
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!active) return;
     const id = setInterval(() => {
@@ -200,6 +199,9 @@ function useFlightPhysics(controlsRef, active) {
       setState({ ...next, phase: computePhase(next) });
     }, 50);
     return () => clearInterval(id);
+    // controlsRef and physRef are intentionally stable mutable refs read by the interval.
+    // Re-running on ref.current changes would reset physics timing without changing behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   function reset(seedState) {

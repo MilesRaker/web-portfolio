@@ -52,18 +52,18 @@ class TopBar extends Component{
                     <Stack>
                         <Container>
                             {styles.showFullName ? (
-                                <Typography  align='left' noWrap='true' variant='h1'>Miles Raker</Typography>
+                                <Typography  align='left' noWrap variant='h1'>Miles Raker</Typography>
                             ) : (
                                 <Typography  align='left' variant='h1'>Raker</Typography>
                             )}
                         </Container>
                         <Container>
                         {styles.showFullName ? (
-                            <Typography align='left' sx={{pl: 2}} noWrap='true' variant='subtitle1'>
+                            <Typography align='left' noWrap variant='subtitle1'>
                                 Aerospace Electrical Engineer | Active Secret Clearance | Palmdale, CA
                             </Typography>
                             ) : (
-                            <Typography align='center' noWrap='true' variant='subtitle1'>
+                            <Typography align='center' noWrap variant='subtitle1'>
                                 Aerospace Electrical Engineer | Active Secret Clearance | Palmdale, CA
                             </Typography>
                             )}

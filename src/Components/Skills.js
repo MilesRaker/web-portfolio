@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Typography, Divider } from '@mui/material';
 import { useTheme, useMediaQuery } from '@mui/material';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -44,17 +44,18 @@ const SKILL_DATA = [
       { name: 'Python',               tier: TIER.Advanced   },
       { name: 'C#',                   tier: TIER.Proficient },
       { name: 'JavaScript / React',   tier: TIER.Proficient },
-      { name: 'Arduino / embedded C', tier: TIER.Familiar   },
-      { name: 'MATLAB',               tier: TIER.Familiar   },
+      { name: 'Arduino / embedded C', tier: TIER.Proficient },
+      { name: 'MATLAB',               tier: TIER.Proficient },
     ],
   },
   {
-    cluster: 'Systems / Program Management',
+    cluster: 'Program Management',
     skills: [
-      { name: 'T&E planning & execution',      tier: TIER.Advanced   },
+      { name: 'T&E planning & execution',      tier: TIER.Proficient },
       { name: 'Technical documentation',       tier: TIER.Advanced   },
       { name: 'Cross-functional coordination', tier: TIER.Proficient },
       { name: 'Requirements development',      tier: TIER.Proficient },
+      { name: 'Scheduling',                    tier: TIER.Proficient },
     ],
   },
 ];

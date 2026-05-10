@@ -164,7 +164,6 @@ Showcase of featured engineering projects, each with a title, description, tech 
 | Vanguard Instrumentation System | Python, Curtiss-Wright/IADS, sensor selection |
 | Landing Gear & Fuel Control Systems | Relay logic, fabrication, validation |
 | Deimos/Phobos Fuel Controller Redesign | Altium (PCB), Arduino/Python, custom test rig |
-| IADS Parameter Management Tool | C# |
 | Python Network Test Suite | Python |
 | Washington Vets2Tech Hiring Portal | React.js |
 
