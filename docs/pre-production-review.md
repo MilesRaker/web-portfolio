@@ -21,15 +21,19 @@ This document captures Task 4 launch-readiness notes for the portfolio before th
 
 ## Security and Dependencies
 
-- Production bundle review is deferred to Task 5. That task should inspect the generated build output for unexpected source exposure, oversized assets, sourcemap policy, and environment-specific assumptions.
-- Dependency review is deferred to Task 5. That task should run the selected audit tooling, review direct production dependencies, and separate runtime risk from development-only tooling risk.
-- Development tooling follow-up is deferred to Task 5. That task should document any known warnings from test/build tooling and decide whether they are acceptable for launch.
-- No secrets or credentials should be committed in source, docs, public assets, or build output. Task 5 should include a final check for accidental secret-like strings.
+- The portfolio is a static React application with no backend runtime, server-side request handling, database, or intentional user-input processing path in production.
+- `npm.cmd audit --omit=dev` currently exits with 25 vulnerabilities: 10 low, 4 moderate, and 11 high. Findings are primarily in the Create React App / `react-scripts` build, test, and development tooling chain, including `@tootallnate/once`, `jsdom` / Jest dependencies, `nth-check` / SVGO, `postcss` / `resolve-url-loader`, `serialize-javascript` / Workbox / `css-minimizer-webpack-plugin` / `rollup-plugin-terser`, and `webpack-dev-server`.
+- The audit results should not be ignored, but they are materially different from a vulnerable backend service or a production feature that processes untrusted user input. Launch is acceptable after the test suite and production build pass, provided the generated build is reviewed as static assets only and does not expose unexpected source, secrets, or environment-specific files.
+- The generated CRA build contains static assets only. It also emits JavaScript and CSS sourcemaps by default; confirm the production source-map deployment policy before launch if source exposure is a concern.
+- `webpack-dev-server` has no available fix through the current CRA dependency chain. The durable follow-up is to migrate away from CRA / `react-scripts` to Vite or another maintained build tool.
+- Build tooling emits a Node `fs.F_OK` deprecation warning. Treat this as a build-tooling warning to resolve during the CRA migration rather than as a production runtime blocker.
+- Secret pattern scanning, excluding `node_modules`, `build`, `.git`, and `package-lock`, found no credentials. The only matches were documentation lines containing `REQUIRED SUB-SKILL`, which are false positives.
 
 ## Deployment
 
-- The app should build as a static React bundle and be served from the configured production host without requiring a backend service.
-- Static routing should be verified against the target host. Direct refreshes on portfolio routes should either resolve correctly or be covered by host fallback configuration.
-- Resume assets should be present in the deployed static asset set, load with correct casing, and remain linked from the portfolio after build fingerprinting.
-- Metadata should be reviewed before launch: document title, description, favicon/app icons, social preview metadata, canonical URL, and robots/indexing behavior.
-- `public/robots.txt` allows indexing per controller verification; deployment should confirm the final hosted file is reachable and unchanged.
+- `npm.cmd run build` passed during the previous verification and should be re-run as the final launch verification before deployment.
+- The app builds as a static React bundle and is intended to be served from Azure Static Web Apps without a backend service.
+- SPA routing needs Azure Static Web Apps fallback configuration so direct refreshes on routes such as `/resume`, `/projects`, and `/values` resolve to the React app instead of returning a host-level 404.
+- Resume and brand assets exist in `public`: `resume.pdf`, `resume.md`, `RocketIcon.ico`, `logo192.png`, and `logo512.png`. Deployment should preserve this exact casing so resume links and icons resolve on case-sensitive hosts.
+- Metadata and robots/indexing behavior are updated for launch. `public/robots.txt` allows indexing per controller verification; deployment should confirm the final hosted file is reachable and unchanged.
+- The app assumes root hosting at `/`. The `package.json` `homepage` field is only needed if deploying under a subpath.
