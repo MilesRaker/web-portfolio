@@ -865,6 +865,10 @@ function TelemetryDemo() {
   if (state.g < 0)                               warnings.push({ label: 'NEG G',     color: C.amber });
   if (state.alt <= 500 && state.alt > 0)         warnings.push({ label: 'LOW ALT',   color: C.red });
 
+  const attitudeSize = isMobile ? 'min(48vw, 34svh, 210px)' : '260px';
+  const secondaryInstrumentSize = isMobile ? 'min(25vw, 96px)' : '160px';
+  const gaugeWidth = isMobile ? 'min(25vw, 96px)' : 160;
+
   function enterInteractive() {
     if (mode === MODE.RETURNING) {
       // Physics is already live at the right state — just hand control to the user
@@ -1017,10 +1021,22 @@ function TelemetryDemo() {
       )}
 
       {/* Instrument panel */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <Box sx={isMobile
+        ? {
+          display: 'grid',
+          gridTemplateColumns: 'minmax(68px, 1fr) minmax(130px, 1.5fr) minmax(68px, 1fr)',
+          gap: 1,
+          alignItems: 'start',
+          px: '70px',
+          pt: 10,
+          height: 'calc(100svh - 24px)',
+          overflow: 'hidden',
+        }
+        : { display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }
+      }>
 
         {/* Left column: G-Load + Airspeed */}
-        <Stack alignItems="center" sx={{ minWidth: 160 }}>
+        <Stack alignItems="center" sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 0.5 : 0 }}>
           <GaugeComponent
             id="gauge-g"
             type="radial"
@@ -1034,7 +1050,7 @@ function TelemetryDemo() {
             ]}}
             pointer={POINTER}
             labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1), style: { fill: C.text } } }}
-            style={{ width: 160 }}
+            style={{ width: gaugeWidth }}
             fadeInAnimation={false}
           />
           <InstrumentLabel>G-LOAD</InstrumentLabel>
@@ -1055,7 +1071,7 @@ function TelemetryDemo() {
               ]}}
               pointer={POINTER}
               labels={{ valueLabel: { formatTextValue: v => Math.round(Number(v)).toString(), style: { fill: C.text } } }}
-              style={{ width: 160 }}
+              style={{ width: gaugeWidth }}
               fadeInAnimation={false}
             />
             <InstrumentLabel>AIRSPEED</InstrumentLabel>
@@ -1065,14 +1081,14 @@ function TelemetryDemo() {
 
         {/* Center: Attitude + Heading */}
         <Stack alignItems="center" spacing={1}>
-          <AttitudeIndicator pitch={state.pitch} roll={state.roll} size="260px" showBox />
+          <AttitudeIndicator pitch={state.pitch} roll={state.roll} size={attitudeSize} showBox />
           <InstrumentLabel>ATTITUDE</InstrumentLabel>
-          <HeadingIndicator heading={state.heading} size="160px" showBox />
+          <HeadingIndicator heading={state.heading} size={secondaryInstrumentSize} showBox />
           <InstrumentLabel>HEADING</InstrumentLabel>
         </Stack>
 
         {/* Right column: Sideslip + Altimeter */}
-        <Stack alignItems="center" sx={{ minWidth: 160 }}>
+        <Stack alignItems="center" sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 0.5 : 0 }}>
           <GaugeComponent
             id="gauge-beta"
             type="radial"
@@ -1088,13 +1104,13 @@ function TelemetryDemo() {
             ]}}
             pointer={POINTER}
             labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1) + '°', style: { fill: C.text } } }}
-            style={{ width: 160 }}
+            style={{ width: gaugeWidth }}
             fadeInAnimation={false}
           />
           <InstrumentLabel>SIDESLIP β</InstrumentLabel>
 
           <Box sx={{ mt: 2 }}>
-            <Altimeter altitude={state.alt} size="160px" showBox />
+            <Altimeter altitude={state.alt} size={secondaryInstrumentSize} showBox />
             <InstrumentLabel>ALTITUDE (FT AGL)</InstrumentLabel>
             <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem' }}>
               {Math.round(state.alt).toLocaleString()}
@@ -1145,12 +1161,14 @@ function TelemetryDemo() {
       )}
 
       {/* Rudder position strip chart */}
-      <Box sx={{ mt: 2 }}>
-        <RudderStripChart value={rudder} />
-        <Box sx={{ textAlign: 'center', mt: 0.25 }}>
-          <InstrumentLabel>RUDDER POS</InstrumentLabel>
+      {!isMobile && (
+        <Box sx={{ mt: 2 }}>
+          <RudderStripChart value={rudder} />
+          <Box sx={{ textAlign: 'center', mt: 0.25 }}>
+            <InstrumentLabel>RUDDER POS</InstrumentLabel>
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {/* Controls — always shown on desktop */}
       {!isMobile && (

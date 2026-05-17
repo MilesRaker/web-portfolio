@@ -146,3 +146,16 @@ test('shows initial takeoff prompt briefly when mobile overlay opens', () => {
 
   expect(screen.queryByText(/accelerate to rotation speed/i)).not.toBeInTheDocument();
 });
+
+test('mobile overlay keeps critical instruments visible', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.getByTestId('attitude-indicator')).toBeInTheDocument();
+  expect(screen.getByTestId('heading-indicator')).toBeInTheDocument();
+  expect(screen.getByTestId('altimeter')).toBeInTheDocument();
+  expect(screen.getByTestId('gauge-ias')).toBeInTheDocument();
+  expect(screen.getByTestId('gauge-g')).toBeInTheDocument();
+  expect(screen.getByTestId('gauge-beta')).toBeInTheDocument();
+});
