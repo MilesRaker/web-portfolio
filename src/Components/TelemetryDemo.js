@@ -7,6 +7,7 @@ import {
   clamp,
   createOrientationNeutral,
   mapOrientationToStick,
+  shouldTriggerRotationPrompt,
 } from './flightSimulatorUtils';
 
 const SCRIPT = [
@@ -560,12 +561,16 @@ function TelemetryDemo() {
   const [throttle, setThrottle]     = useState(0.5);
   const [rudder,   setRudder]       = useState(0);
   const [tiltStatus, setTiltStatus] = useState('idle'); // idle | enabled | unavailable | denied
+  const [mobilePrompt, setMobilePrompt] = useState(null);
   const [autoStickPos, setAutoStickPos] = useState({ x: 0, y: 0 });
   const startRef    = useRef(Date.now());
   const controlsRef = useRef({ stickX: 0, stickY: 0, throttle: 0.5, rudder: 0 });
   const keysRef     = useRef(new Set());
   const orientationNeutralRef = useRef(null);
   const latestOrientationRef = useRef(null);
+  const rotationPromptShownRef = useRef(false);
+  const previousIasRef = useRef(INIT_PHYSICS.ias);
+  const mobilePromptTimeoutRef = useRef(null);
   const [landingResult, setLandingResult] = useState(null); // null | 'rolling' | 'crashed' | 'landed' | 'overrun'
   const [rollTimeLeft, setRollTimeLeft]   = useState(30);
   const prevAltRef        = useRef(INIT_PHYSICS.alt);
@@ -575,6 +580,12 @@ function TelemetryDemo() {
   function handleThrottleChange(val) {
     controlsRef.current.throttle = val;
     setThrottle(val);
+  }
+
+  function showMobilePrompt(message) {
+    setMobilePrompt(message);
+    window.clearTimeout(mobilePromptTimeoutRef.current);
+    mobilePromptTimeoutRef.current = window.setTimeout(() => setMobilePrompt(null), 2200);
   }
 
   function handleRudderChange(val) {
@@ -726,6 +737,23 @@ function TelemetryDemo() {
   const physicsActive = (mode === MODE.INTERACTIVE || mode === MODE.RETURNING) &&
                         (landingResult === null || landingResult === 'rolling');
   const { state: physState, stateRef: physStateRef, reset: resetPhysics } = useFlightPhysics(controlsRef, physicsActive);
+
+  useEffect(() => {
+    if (!isMobile || !mobileOpen || mode !== MODE.INTERACTIVE) return;
+    if (shouldTriggerRotationPrompt({
+      previousIas: previousIasRef.current,
+      currentIas: physState.ias,
+      alreadyShown: rotationPromptShownRef.current,
+    })) {
+      rotationPromptShownRef.current = true;
+      showMobilePrompt('Tilt back to liftoff');
+    }
+    previousIasRef.current = physState.ias;
+  }, [isMobile, mobileOpen, mode, physState.ias]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    return () => window.clearTimeout(mobilePromptTimeoutRef.current);
+  }, []);
 
   // Touchdown detection
   useEffect(() => {
@@ -896,7 +924,10 @@ function TelemetryDemo() {
     prevAltRef.current = INIT_PHYSICS.alt;
     orientationNeutralRef.current = null;
     latestOrientationRef.current = null;
+    rotationPromptShownRef.current = false;
+    previousIasRef.current = INIT_PHYSICS.ias;
     setTiltStatus('idle');
+    showMobilePrompt('Accelerate to rotation speed');
     setMode(MODE.INTERACTIVE);
     setMobileOpen(true);
   }
@@ -1251,6 +1282,33 @@ function TelemetryDemo() {
           <Typography sx={{ position: 'absolute', top: 58, left: 8, right: 8, zIndex: 2, color: C.amber, ...MONO, fontSize: '0.7rem', textAlign: 'center' }}>
             Tilt control denied. Use touch controls.
           </Typography>
+        )}
+        {mobilePrompt && (
+          <Box sx={{
+            position: 'absolute',
+            left: 72,
+            right: 84,
+            top: '45%',
+            zIndex: 3,
+            textAlign: 'center',
+            pointerEvents: 'none',
+          }}>
+            <Typography sx={{
+              display: 'inline-block',
+              px: 2,
+              py: 1,
+              color: C.green,
+              bgcolor: 'rgba(8, 12, 18, 0.86)',
+              border: `1px solid ${C.green}`,
+              borderRadius: 1,
+              ...MONO,
+              fontSize: '0.9rem',
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+            }}>
+              {mobilePrompt}
+            </Typography>
+          </Box>
         )}
         <MobileThrottleSlider value={throttle} onChange={handleThrottleChange} />
         <MobilePedalSlider value={rudder} onChange={handleRudderChange} />

@@ -132,3 +132,17 @@ test('mobile pedal slider returns to center on release', () => {
   userEvent.tab();
   expect(pedals).toHaveAttribute('aria-valuenow', '0');
 });
+
+test('shows initial takeoff prompt briefly when mobile overlay opens', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.getByText(/accelerate to rotation speed/i)).toBeInTheDocument();
+
+  act(() => {
+    jest.advanceTimersByTime(2500);
+  });
+
+  expect(screen.queryByText(/accelerate to rotation speed/i)).not.toBeInTheDocument();
+});
