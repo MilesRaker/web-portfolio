@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import TelemetryDemo from './TelemetryDemo';
@@ -146,6 +146,23 @@ test('mobile overlay shows labeled throttle and pedal controls', () => {
   expect(screen.getByRole('slider', { name: /pedals/i })).toBeInTheDocument();
 });
 
+test('mobile throttle increases IAS during takeoff roll', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+  const throttle = screen.getByRole('slider', { name: /throttle/i });
+  throttle.focus();
+  for (let i = 0; i < 9; i += 1) {
+    fireEvent.keyDown(throttle, { key: 'ArrowUp' });
+  }
+
+  act(() => {
+    jest.advanceTimersByTime(1500);
+  });
+
+  expect(screen.getByTestId('gauge-ias')).not.toHaveTextContent('value 0');
+});
+
 test('mobile pedal slider returns to center on release', () => {
   renderMobile();
 
@@ -186,4 +203,27 @@ test('mobile overlay keeps critical instruments visible', () => {
   expect(screen.getByTestId('gauge-ias')).toBeInTheDocument();
   expect(screen.getByTestId('gauge-g')).toBeInTheDocument();
   expect(screen.getByTestId('gauge-beta')).toBeInTheDocument();
+});
+
+test('mobile instrument labels are grouped with their dials', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.getByTestId('instrument-g')).toContainElement(screen.getByText('G'));
+  expect(screen.getByTestId('instrument-ias')).toContainElement(screen.getByText('IAS'));
+  expect(screen.getByTestId('instrument-attitude')).toContainElement(screen.getByText('ATTITUDE'));
+  expect(screen.getByTestId('instrument-heading')).toContainElement(screen.getByText('HEADING'));
+  expect(screen.getByTestId('instrument-beta')).toContainElement(screen.getByText('BETA'));
+  expect(screen.getByTestId('instrument-alt')).toContainElement(screen.getByText('ALT'));
+});
+
+test('mobile altitude value is shown above the altitude dial', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  const altitudeInstrument = screen.getByTestId('instrument-alt');
+  expect(altitudeInstrument).toContainElement(screen.getByTestId('altitude-value'));
+  expect(screen.getByTestId('altitude-value').compareDocumentPosition(screen.getByTestId('altimeter'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });

@@ -121,7 +121,7 @@ function stepPhysics(s, ctrl) {
 
   // Ground roll / takeoff roll
   if (s.alt <= 0) {
-    const ias = clamp(s.ias + (throttle * 12 - 8) * dt, 0, 500);
+    const ias = clamp(s.ias + (throttle * 10 - 2) * dt, 0, 500);
     let pitch = s.pitch;
     let alt   = 0;
     let vSpeed = 0;
@@ -382,33 +382,92 @@ function ThrottleControl({ value, onChange, interactive }) {
 }
 
 function MobileThrottleSlider({ value, onChange }) {
+  const trackRef = useRef(null);
+  const draggingRef = useRef(false);
+
+  function setFromClientY(clientY) {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    onChange(clamp(1 - (clientY - rect.top) / rect.height, 0, 1));
+  }
+
+  function handleKeyDown(e) {
+    const smallStep = 0.05;
+    const largeStep = 0.15;
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      onChange(clamp(value + smallStep, 0, 1));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      onChange(clamp(value - smallStep, 0, 1));
+    } else if (e.key === 'PageUp') {
+      e.preventDefault();
+      onChange(clamp(value + largeStep, 0, 1));
+    } else if (e.key === 'PageDown') {
+      e.preventDefault();
+      onChange(clamp(value - largeStep, 0, 1));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      onChange(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      onChange(1);
+    }
+  }
+
   return (
     <Box sx={{ position: 'absolute', left: 8, top: 104, bottom: 24, width: 52, display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 1, zIndex: 2 }}>
       <Typography sx={{ color: C.text, ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>
         Throttle
       </Typography>
-      <input
+      <Box
+        ref={trackRef}
+        role="slider"
         aria-label="Throttle"
-        aria-valuenow={String(value)}
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{
-          writingMode: 'vertical-lr',
-          direction: 'rtl',
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(value * 100)}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onPointerDown={e => {
+          e.preventDefault();
+          draggingRef.current = true;
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          setFromClientY(e.clientY);
+        }}
+        onPointerMove={e => {
+          if (!draggingRef.current) return;
+          setFromClientY(e.clientY);
+        }}
+        onPointerUp={e => {
+          draggingRef.current = false;
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
+        }}
+        onPointerCancel={() => { draggingRef.current = false; }}
+        sx={{
           width: 36,
           flex: 1,
-          accentColor: C.green,
+          border: `1px solid ${C.dim}`,
+          borderRadius: 1,
+          position: 'relative',
+          bgcolor: '#0a1520',
+          cursor: 'ns-resize',
+          touchAction: 'none',
+          '&:focus-visible': {
+            outline: `2px solid ${C.amber}`,
+            outlineOffset: 2,
+          },
         }}
-      />
+      >
+        <Box sx={{ position: 'absolute', bottom: 0, left: 3, right: 3, height: `${value * 100}%`, bgcolor: C.green, opacity: 0.18, borderRadius: 0.5 }} />
+        <Box sx={{ position: 'absolute', left: 4, right: 4, bottom: `calc(${value * 100}% - 6px)`, height: 12, bgcolor: C.green, borderRadius: 0.5, boxShadow: `0 0 8px ${C.green}` }} />
+      </Box>
     </Box>
   );
 }
 
-function MobilePedalSlider({ value, onChange }) {
+function MobilePedalSlider({ value, onChange, landscape }) {
   function center() {
     onChange(0);
   }
@@ -424,7 +483,7 @@ function MobilePedalSlider({ value, onChange }) {
   }
 
   return (
-    <Box sx={{ position: 'absolute', right: 8, top: 104, bottom: 24, width: 68, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1, zIndex: 2 }}>
+    <Box sx={{ position: 'absolute', right: landscape ? 28 : 8, top: 104, bottom: 24, width: 68, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1, zIndex: 2 }}>
       <Typography sx={{ color: C.text, ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>
         Pedals
       </Typography>
@@ -552,6 +611,25 @@ function InstrumentLabel({ children }) {
     <Typography variant="caption" sx={{ color: C.text, ...MONO, letterSpacing: 1, mt: -0.5 }}>
       {children}
     </Typography>
+  );
+}
+
+function InstrumentStack({ children, label, testId, sx }) {
+  return (
+    <Box
+      data-testid={testId}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 0,
+        ...sx,
+      }}
+    >
+      {children}
+      <InstrumentLabel>{label}</InstrumentLabel>
+    </Box>
   );
 }
 
@@ -686,6 +764,7 @@ function TelemetryDemo() {
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobileLandscape = isMobile && typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -865,9 +944,104 @@ function TelemetryDemo() {
   if (state.g < 0)                               warnings.push({ label: 'NEG G',     color: C.amber });
   if (state.alt <= 500 && state.alt > 0)         warnings.push({ label: 'LOW ALT',   color: C.red });
 
-  const attitudeSize = isMobile ? '150px' : '260px';
-  const secondaryInstrumentSize = isMobile ? '74px' : '160px';
-  const gaugeWidth = isMobile ? 74 : 160;
+  const attitudeSize = isMobileLandscape ? '180px' : isMobile ? '140px' : '260px';
+  const secondaryInstrumentSize = isMobileLandscape ? '86px' : isMobile ? '68px' : '160px';
+  const gaugeWidth = isMobileLandscape ? 98 : isMobile ? 70 : 160;
+
+  const gInstrument = (
+    <InstrumentStack label={isMobile ? 'G' : 'G-LOAD'} testId="instrument-g">
+      <GaugeComponent
+        id="gauge-g"
+        type="radial"
+        value={state.g}
+        minValue={0}
+        maxValue={4}
+        arc={{ subArcs: [
+          { limit: 1.5, color: C.green },
+          { limit: 2.5, color: C.amber },
+          { limit: 4.0, color: C.red },
+        ]}}
+        pointer={POINTER}
+        labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1), style: { fill: C.text } } }}
+        style={{ width: gaugeWidth }}
+        fadeInAnimation={false}
+      />
+    </InstrumentStack>
+  );
+
+  const iasInstrument = (
+    <InstrumentStack label={isMobile ? 'IAS' : 'AIRSPEED'} testId="instrument-ias" sx={{ mt: isMobile ? 0 : 2 }}>
+      <GaugeComponent
+        id="gauge-ias"
+        type="radial"
+        value={state.ias}
+        minValue={0}
+        maxValue={400}
+        arc={{ subArcs: [
+          { limit: 120, color: C.red },
+          { limit: 150, color: C.amber },
+          { limit: 320, color: C.green },
+          { limit: 370, color: C.amber },
+          { limit: 400, color: C.red },
+        ]}}
+        pointer={POINTER}
+        labels={{ valueLabel: { formatTextValue: v => Math.round(Number(v)).toString(), style: { fill: C.text } } }}
+        style={{ width: gaugeWidth }}
+        fadeInAnimation={false}
+      />
+      {!isMobile && (
+        <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
+      )}
+    </InstrumentStack>
+  );
+
+  const attitudeInstrument = (
+    <InstrumentStack label="ATTITUDE" testId="instrument-attitude">
+      <AttitudeIndicator pitch={state.pitch} roll={state.roll} size={attitudeSize} showBox />
+    </InstrumentStack>
+  );
+
+  const headingInstrument = (
+    <InstrumentStack label="HEADING" testId="instrument-heading">
+      <HeadingIndicator heading={state.heading} size={secondaryInstrumentSize} showBox />
+    </InstrumentStack>
+  );
+
+  const betaInstrument = (
+    <InstrumentStack label={isMobile ? 'BETA' : 'SIDESLIP β'} testId="instrument-beta">
+      <GaugeComponent
+        id="gauge-beta"
+        type="radial"
+        value={state.beta}
+        minValue={-10}
+        maxValue={10}
+        arc={{ subArcs: [
+          { limit: -6, color: C.red },
+          { limit: -3, color: C.amber },
+          { limit:  3, color: C.green },
+          { limit:  6, color: C.amber },
+          { limit: 10, color: C.red },
+        ]}}
+        pointer={POINTER}
+        labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1) + '°', style: { fill: C.text } } }}
+        style={{ width: gaugeWidth }}
+        fadeInAnimation={false}
+      />
+    </InstrumentStack>
+  );
+
+  const altInstrument = (
+    <InstrumentStack label={isMobile ? 'ALT' : 'ALTITUDE (FT AGL)'} testId="instrument-alt" sx={{ mt: isMobile ? 0 : 2 }}>
+      <Typography
+        data-testid="altitude-value"
+        variant="caption"
+        sx={{ color: '#3a4a5a', ...MONO, fontSize: isMobile ? '0.6rem' : '0.65rem', lineHeight: 1 }}
+      >
+        {Math.round(state.alt).toLocaleString()}
+      </Typography>
+      <Altimeter altitude={state.alt} size={secondaryInstrumentSize} showBox />
+    </InstrumentStack>
+  );
 
   function enterInteractive() {
     if (mode === MODE.RETURNING) {
@@ -1040,111 +1214,62 @@ function TelemetryDemo() {
       <Box sx={isMobile
         ? {
           display: 'grid',
-          gridTemplateColumns: '1fr',
-          gap: 0.5,
-          alignItems: 'start',
-          px: '70px',
-          pt: 10,
+          gridTemplateColumns: isMobileLandscape ? '1fr 1.2fr 1fr' : '1fr',
+          gap: isMobileLandscape ? 1 : 0.5,
+          alignItems: isMobileLandscape ? 'center' : 'start',
+          px: isMobileLandscape ? '92px' : '70px',
+          pt: isMobileLandscape ? 5 : 8,
           height: 'calc(100svh - 24px)',
           overflow: 'hidden',
         }
         : { display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }
       }>
+        {isMobileLandscape ? (
+          <>
+            <Stack alignItems="center" justifyContent="center" spacing={0.35} sx={{ minWidth: 0 }}>
+              {gInstrument}
+              {betaInstrument}
+            </Stack>
+            <Stack alignItems="center" justifyContent="center" spacing={0.25} sx={{ minWidth: 0 }}>
+              {attitudeInstrument}
+              {headingInstrument}
+            </Stack>
+            <Stack alignItems="center" justifyContent="center" spacing={0.35} sx={{ minWidth: 0 }}>
+              {iasInstrument}
+              {altInstrument}
+            </Stack>
+          </>
+        ) : (
+          <>
+            {/* Left column: G-Load + Airspeed */}
+            <Stack
+              alignItems="center"
+              justifyContent="center"
+              direction={isMobile ? 'row' : 'column'}
+              sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 2 : 'initial' }}
+            >
+              {gInstrument}
+              {iasInstrument}
+            </Stack>
 
-        {/* Left column: G-Load + Airspeed */}
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          direction={isMobile ? 'row' : 'column'}
-          sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 2 : 'initial' }}
-        >
-          <GaugeComponent
-            id="gauge-g"
-            type="radial"
-            value={state.g}
-            minValue={0}
-            maxValue={4}
-            arc={{ subArcs: [
-              { limit: 1.5, color: C.green },
-              { limit: 2.5, color: C.amber },
-              { limit: 4.0, color: C.red },
-            ]}}
-            pointer={POINTER}
-            labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1), style: { fill: C.text } } }}
-            style={{ width: gaugeWidth }}
-            fadeInAnimation={false}
-          />
-          <InstrumentLabel>{isMobile ? 'G' : 'G-LOAD'}</InstrumentLabel>
+            {/* Center: Attitude + Heading */}
+            <Stack alignItems="center" spacing={isMobile ? 0.25 : 1} sx={{ order: isMobile ? 1 : 'initial' }}>
+              {attitudeInstrument}
+              {headingInstrument}
+            </Stack>
 
-          <Box sx={{ mt: isMobile ? 0.25 : 2 }}>
-            <GaugeComponent
-              id="gauge-ias"
-              type="radial"
-              value={state.ias}
-              minValue={0}
-              maxValue={400}
-              arc={{ subArcs: [
-                { limit: 120, color: C.red },
-                { limit: 150, color: C.amber },
-                { limit: 320, color: C.green },
-                { limit: 370, color: C.amber },
-                { limit: 400, color: C.red },
-              ]}}
-              pointer={POINTER}
-              labels={{ valueLabel: { formatTextValue: v => Math.round(Number(v)).toString(), style: { fill: C.text } } }}
-              style={{ width: gaugeWidth }}
-              fadeInAnimation={false}
-            />
-            <InstrumentLabel>{isMobile ? 'IAS' : 'AIRSPEED'}</InstrumentLabel>
-            {!isMobile && (
-              <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
-            )}
-          </Box>
-        </Stack>
-
-        {/* Center: Attitude + Heading */}
-        <Stack alignItems="center" spacing={isMobile ? 0.25 : 1} sx={{ order: isMobile ? 1 : 'initial' }}>
-          <AttitudeIndicator pitch={state.pitch} roll={state.roll} size={attitudeSize} showBox />
-          <InstrumentLabel>ATTITUDE</InstrumentLabel>
-          <HeadingIndicator heading={state.heading} size={secondaryInstrumentSize} showBox />
-          <InstrumentLabel>HEADING</InstrumentLabel>
-        </Stack>
-
-        {/* Right column: Sideslip + Altimeter */}
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          direction={isMobile ? 'row' : 'column'}
-          sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 3 : 'initial' }}
-        >
-          <GaugeComponent
-            id="gauge-beta"
-            type="radial"
-            value={state.beta}
-            minValue={-10}
-            maxValue={10}
-            arc={{ subArcs: [
-              { limit: -6, color: C.red },
-              { limit: -3, color: C.amber },
-              { limit:  3, color: C.green },
-              { limit:  6, color: C.amber },
-              { limit: 10, color: C.red },
-            ]}}
-            pointer={POINTER}
-            labels={{ valueLabel: { formatTextValue: v => Number(v).toFixed(1) + '°', style: { fill: C.text } } }}
-            style={{ width: gaugeWidth }}
-            fadeInAnimation={false}
-          />
-          <InstrumentLabel>{isMobile ? 'BETA' : 'SIDESLIP β'}</InstrumentLabel>
-
-          <Box sx={{ mt: isMobile ? 0.25 : 2 }}>
-            <Altimeter altitude={state.alt} size={secondaryInstrumentSize} showBox />
-            <InstrumentLabel>{isMobile ? 'ALT' : 'ALTITUDE (FT AGL)'}</InstrumentLabel>
-            <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem' }}>
-              {Math.round(state.alt).toLocaleString()}
-            </Typography>
-          </Box>
-        </Stack>
+            {/* Right column: Sideslip + Altimeter */}
+            <Stack
+              alignItems="center"
+              justifyContent="center"
+              direction={isMobile ? 'row' : 'column'}
+              sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 3 : 'initial' }}
+            >
+              {betaInstrument}
+              {altInstrument}
+            </Stack>
+          </>
+        )}
 
       </Box>
 
@@ -1357,7 +1482,7 @@ function TelemetryDemo() {
           </Box>
         )}
         <MobileThrottleSlider value={throttle} onChange={handleThrottleChange} />
-        <MobilePedalSlider value={rudder} onChange={handleRudderChange} />
+        <MobilePedalSlider value={rudder} onChange={handleRudderChange} landscape={isMobileLandscape} />
         {panel}
       </Box>
     );
