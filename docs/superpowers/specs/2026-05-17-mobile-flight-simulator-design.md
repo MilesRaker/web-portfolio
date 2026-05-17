@@ -32,10 +32,20 @@ The tilt mapping should clamp to the existing `-1` to `1` control range for `sti
 
 The mobile overlay also includes two touch controls:
 
-- A vertical throttle slider on the left side. Bottom is idle or low throttle, top is full throttle. The value remains where the user leaves it.
-- A horizontal pedal/rudder slider on the right side. Center is neutral, left is left pedal/rudder, and right is right pedal/rudder. The control should return to center when released.
+- A vertical throttle slider on the left side with a visible `Throttle` label. Bottom is idle or low throttle, top is full throttle. The value remains where the user leaves it.
+- A horizontal pedal/rudder slider on the right side with a visible `Pedals` label. Center is neutral, left is left pedal/rudder, and right is right pedal/rudder. The control should return to center when released.
 
 These controls write to the existing flight control state used by the physics loop: `throttle`, `rudder`, `stickX`, and `stickY`.
+
+## User Prompts
+
+The mobile overlay should provide brief, state-based text prompts to help first-time users understand takeoff without adding persistent instruction clutter.
+
+On first load in manual mode, `Accelerate to rotation speed` appears momentarily across the simulator. It should be visually prominent, then fade or clear automatically.
+
+Once the aircraft reaches rotation speed, `Tilt back to liftoff` appears momentarily across the simulator. This prompt should trigger once per mobile simulator session when indicated airspeed first reaches `Vr`. Use the existing stall/rotation threshold from the physics model unless implementation reveals a clearer named rotation-speed constant is needed.
+
+Prompts should not block controls, should not require dismissal, and should not stack over each other.
 
 ## Instrument Layout
 
@@ -65,6 +75,9 @@ Automated tests should cover:
 - Mobile starts in manual control mode.
 - Orientation events map to `stickX` and `stickY` with calibration, clamping, and deadband behavior.
 - The throttle slider writes persistent throttle values.
+- The throttle and pedal sliders have visible labels.
 - The pedal slider writes rudder values and returns to center on release.
+- The initial `Accelerate to rotation speed` prompt appears briefly on mobile overlay load.
+- The `Tilt back to liftoff` prompt appears briefly when the aircraft first reaches `Vr`.
 
 Manual verification should include at least one narrow mobile viewport and one desktop viewport. On mobile, confirm the overlay fills the screen, the exit and recenter controls are reachable, instruments are readable, and controls do not overlap.
