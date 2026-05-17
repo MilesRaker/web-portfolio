@@ -5,6 +5,8 @@ import GaugeComponent from 'react-gauge-component';
 import {
   ROTATION_SPEED,
   clamp,
+  createOrientationNeutral,
+  mapOrientationToStick,
 } from './flightSimulatorUtils';
 
 const SCRIPT = [
@@ -488,10 +490,13 @@ function TelemetryDemo() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [throttle, setThrottle]     = useState(0.5);
   const [rudder,   setRudder]       = useState(0);
+  const [tiltStatus, setTiltStatus] = useState('idle'); // idle | enabled | unavailable | denied
   const [autoStickPos, setAutoStickPos] = useState({ x: 0, y: 0 });
   const startRef    = useRef(Date.now());
   const controlsRef = useRef({ stickX: 0, stickY: 0, throttle: 0.5, rudder: 0 });
   const keysRef     = useRef(new Set());
+  const orientationNeutralRef = useRef(null);
+  const latestOrientationRef = useRef(null);
   const [landingResult, setLandingResult] = useState(null); // null | 'rolling' | 'crashed' | 'landed' | 'overrun'
   const [rollTimeLeft, setRollTimeLeft]   = useState(30);
   const prevAltRef        = useRef(INIT_PHYSICS.alt);
@@ -501,6 +506,44 @@ function TelemetryDemo() {
   function handleThrottleChange(val) {
     controlsRef.current.throttle = val;
     setThrottle(val);
+  }
+
+  function applyOrientation(reading) {
+    latestOrientationRef.current = reading;
+    if (!orientationNeutralRef.current) {
+      orientationNeutralRef.current = createOrientationNeutral(reading);
+    }
+    const { stickX, stickY } = mapOrientationToStick(reading, orientationNeutralRef.current);
+    controlsRef.current.stickX = stickX;
+    controlsRef.current.stickY = stickY;
+  }
+
+  function recenterTilt() {
+    if (!latestOrientationRef.current) {
+      orientationNeutralRef.current = null;
+      return;
+    }
+    orientationNeutralRef.current = createOrientationNeutral(latestOrientationRef.current);
+    controlsRef.current.stickX = 0;
+    controlsRef.current.stickY = 0;
+  }
+
+  async function enableTiltControl() {
+    if (typeof window.DeviceOrientationEvent === 'undefined') {
+      setTiltStatus('unavailable');
+      return;
+    }
+
+    const permissionApi = window.DeviceOrientationEvent.requestPermission;
+    if (typeof permissionApi === 'function') {
+      const result = await permissionApi();
+      if (result !== 'granted') {
+        setTiltStatus('denied');
+        return;
+      }
+    }
+
+    setTiltStatus('enabled');
   }
 
   useEffect(() => {
@@ -567,6 +610,24 @@ function TelemetryDemo() {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!isMobile || !mobileOpen) return undefined;
+    if (typeof window.DeviceOrientationEvent === 'undefined') {
+      setTiltStatus('unavailable');
+      return undefined;
+    }
+    if (typeof window.DeviceOrientationEvent.requestPermission === 'function' && tiltStatus !== 'enabled') {
+      setTiltStatus('idle');
+      return undefined;
+    }
+    setTiltStatus('enabled');
+    function onDeviceOrientation(event) {
+      applyOrientation({ beta: event.beta, gamma: event.gamma });
+    }
+    window.addEventListener('deviceorientation', onDeviceOrientation);
+    return () => window.removeEventListener('deviceorientation', onDeviceOrientation);
+  }, [isMobile, mobileOpen, tiltStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-play — also drives control display positions
   const [autoState, setAutoState] = useState(() => sample(0));
@@ -759,6 +820,9 @@ function TelemetryDemo() {
     setRollTimeLeft(30);
     resetPhysics({ ...INIT_PHYSICS });
     prevAltRef.current = INIT_PHYSICS.alt;
+    orientationNeutralRef.current = null;
+    latestOrientationRef.current = null;
+    setTiltStatus('idle');
     setMode(MODE.INTERACTIVE);
     setMobileOpen(true);
   }
@@ -1081,7 +1145,7 @@ function TelemetryDemo() {
       >
         <Button
           aria-label="Recenter"
-          onClick={() => {}}
+          onClick={recenterTilt}
           sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2, color: C.text, borderColor: C.dim }}
           variant="outlined"
         >
@@ -1095,6 +1159,25 @@ function TelemetryDemo() {
         >
           Exit
         </Button>
+        {tiltStatus === 'idle' && (
+          <Button
+            variant="outlined"
+            onClick={enableTiltControl}
+            sx={{ position: 'absolute', top: 52, left: 8, zIndex: 2, color: C.green, borderColor: C.green, ...MONO, fontSize: '0.65rem' }}
+          >
+            Enable tilt control
+          </Button>
+        )}
+        {tiltStatus === 'unavailable' && (
+          <Typography sx={{ position: 'absolute', top: 58, left: 8, right: 8, zIndex: 2, color: C.amber, ...MONO, fontSize: '0.7rem', textAlign: 'center' }}>
+            Tilt control unavailable. Use touch controls.
+          </Typography>
+        )}
+        {tiltStatus === 'denied' && (
+          <Typography sx={{ position: 'absolute', top: 58, left: 8, right: 8, zIndex: 2, color: C.amber, ...MONO, fontSize: '0.7rem', textAlign: 'center' }}>
+            Tilt control denied. Use touch controls.
+          </Typography>
+        )}
         {panel}
       </Box>
     );

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import TelemetryDemo from './TelemetryDemo';
@@ -68,5 +68,41 @@ test('mobile overlay starts in manual control mode', () => {
   userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
 
   expect(screen.queryByRole('button', { name: /click to take control/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /recenter/i })).toBeInTheDocument();
+});
+
+test('shows orientation enable control when DeviceOrientationEvent permission is requestable', async () => {
+  const requestPermission = jest.fn().mockResolvedValue('granted');
+  window.DeviceOrientationEvent = function DeviceOrientationEvent() {};
+  window.DeviceOrientationEvent.requestPermission = requestPermission;
+
+  renderMobile();
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  await act(async () => {
+    userEvent.click(screen.getByRole('button', { name: /enable tilt control/i }));
+  });
+
+  await waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1));
+});
+
+test('shows a tilt unavailable message when orientation is unsupported', () => {
+  delete window.DeviceOrientationEvent;
+
+  renderMobile();
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.getByText(/tilt control unavailable/i)).toBeInTheDocument();
+});
+
+test('recenter button recalibrates the current orientation', () => {
+  window.DeviceOrientationEvent = function DeviceOrientationEvent() {};
+
+  renderMobile();
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  window.dispatchEvent(new Event('deviceorientation'));
+  userEvent.click(screen.getByRole('button', { name: /recenter/i }));
+
   expect(screen.getByRole('button', { name: /recenter/i })).toBeInTheDocument();
 });
