@@ -485,6 +485,7 @@ function InstrumentLabel({ children }) {
 
 function TelemetryDemo() {
   const [mode, setMode]             = useState(MODE.AUTO);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [throttle, setThrottle]     = useState(0.5);
   const [rudder,   setRudder]       = useState(0);
   const [autoStickPos, setAutoStickPos] = useState({ x: 0, y: 0 });
@@ -557,6 +558,15 @@ function TelemetryDemo() {
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isMobile = useMediaQuery('(max-width:600px)');
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
 
   // Auto-play — also drives control display positions
   const [autoState, setAutoState] = useState(() => sample(0));
@@ -741,8 +751,33 @@ function TelemetryDemo() {
     }
   }
 
-  return (
-    <Box sx={{ bgcolor: C.bg, border: `1px solid ${C.dim}`, borderRadius: 2, p: 2, mt: 4, maxWidth: 880, mx: 'auto', position: 'relative' }}>
+  if (isMobile && !mobileOpen) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        <Button
+          variant="outlined"
+          onClick={() => setMobileOpen(true)}
+          sx={{ ...MONO, fontSize: '0.75rem', letterSpacing: 1, color: C.green, borderColor: C.green }}
+        >
+          Click for flight simulator
+        </Button>
+      </Box>
+    );
+  }
+
+  const panel = (
+    <Box sx={{
+      bgcolor: C.bg,
+      border: `1px solid ${C.dim}`,
+      borderRadius: isMobile ? 0 : 2,
+      p: 2,
+      mt: isMobile ? 0 : 4,
+      maxWidth: isMobile ? 'none' : 880,
+      height: isMobile ? '100svh' : 'auto',
+      mx: 'auto',
+      overflow: isMobile ? 'hidden' : 'visible',
+      position: 'relative',
+    }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1017,6 +1052,35 @@ function TelemetryDemo() {
       )}
     </Box>
   );
+
+  if (isMobile && mobileOpen) {
+    return (
+      <Box
+        role="dialog"
+        aria-label="Flight simulator"
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          bgcolor: C.bg,
+          color: C.text,
+          overflow: 'hidden',
+        }}
+      >
+        <Button
+          aria-label="Exit"
+          onClick={() => setMobileOpen(false)}
+          sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, color: C.text, borderColor: C.dim }}
+          variant="outlined"
+        >
+          Exit
+        </Button>
+        {panel}
+      </Box>
+    );
+  }
+
+  return panel;
 }
 
 export default TelemetryDemo;
