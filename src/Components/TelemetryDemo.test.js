@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import TelemetryDemo from './TelemetryDemo';
+import TelemetryDemo, { MOBILE_SIMULATOR_MEDIA_QUERY } from './TelemetryDemo';
 
 jest.mock('@mui/material/useMediaQuery');
 
@@ -49,6 +49,11 @@ test('renders only a mobile simulator entry button before launch', () => {
 
   expect(screen.getByRole('button', { name: /click for flight simulator/i })).toBeInTheDocument();
   expect(screen.queryByText(/telemetry sim/i)).not.toBeInTheDocument();
+});
+
+test('mobile simulator media query includes touch landscape phones', () => {
+  expect(MOBILE_SIMULATOR_MEDIA_QUERY).toContain('(max-width:600px)');
+  expect(MOBILE_SIMULATOR_MEDIA_QUERY).toContain('(hover:none) and (pointer:coarse)');
 });
 
 test('opens and closes the mobile full-screen overlay', () => {

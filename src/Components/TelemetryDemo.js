@@ -590,6 +590,7 @@ const C = {
 const MONO = { fontFamily: 'monospace' };
 
 const MODE = { AUTO: 'auto', INTERACTIVE: 'interactive', RETURNING: 'returning' };
+export const MOBILE_SIMULATOR_MEDIA_QUERY = '(max-width:600px), (hover:none) and (pointer:coarse)';
 
 const LANDING_COPY = {
   landed:  { title: 'NICE! YOU LANDED SAFELY',  body: 'Throttle to zero and stopped before the runway end. Great job!' },
@@ -763,7 +764,7 @@ function TelemetryDemo() {
     };
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobile = useMediaQuery(MOBILE_SIMULATOR_MEDIA_QUERY);
   const isMobileLandscape = isMobile && typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
 
   useEffect(() => {
