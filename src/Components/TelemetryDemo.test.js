@@ -106,3 +106,29 @@ test('recenter button recalibrates the current orientation', () => {
 
   expect(screen.getByRole('button', { name: /recenter/i })).toBeInTheDocument();
 });
+
+test('mobile overlay shows labeled throttle and pedal controls', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.getByText(/throttle/i)).toBeInTheDocument();
+  expect(screen.getByText(/pedals/i)).toBeInTheDocument();
+  expect(screen.getByRole('slider', { name: /throttle/i })).toBeInTheDocument();
+  expect(screen.getByRole('slider', { name: /pedals/i })).toBeInTheDocument();
+});
+
+test('mobile pedal slider returns to center on release', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+  const pedals = screen.getByRole('slider', { name: /pedals/i });
+
+  userEvent.keyboard('{Tab}');
+  pedals.focus();
+  userEvent.keyboard('{ArrowRight}');
+  expect(pedals).toHaveAttribute('aria-valuenow', '1');
+
+  userEvent.tab();
+  expect(pedals).toHaveAttribute('aria-valuenow', '0');
+});

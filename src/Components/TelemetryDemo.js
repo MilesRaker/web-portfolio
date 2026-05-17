@@ -380,6 +380,75 @@ function ThrottleControl({ value, onChange, interactive }) {
   );
 }
 
+function MobileThrottleSlider({ value, onChange }) {
+  return (
+    <Box sx={{ position: 'absolute', left: 8, top: 104, bottom: 24, width: 52, display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 1, zIndex: 2 }}>
+      <Typography sx={{ color: C.text, ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>
+        Throttle
+      </Typography>
+      <input
+        aria-label="Throttle"
+        aria-valuenow={String(value)}
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        style={{
+          writingMode: 'vertical-lr',
+          direction: 'rtl',
+          width: 36,
+          flex: 1,
+          accentColor: C.green,
+        }}
+      />
+    </Box>
+  );
+}
+
+function MobilePedalSlider({ value, onChange }) {
+  function center() {
+    onChange(0);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      onChange(1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      onChange(-1);
+    }
+  }
+
+  return (
+    <Box sx={{ position: 'absolute', right: 8, top: 104, bottom: 24, width: 68, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1, zIndex: 2 }}>
+      <Typography sx={{ color: C.text, ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>
+        Pedals
+      </Typography>
+      <input
+        aria-label="Pedals"
+        aria-valuenow={String(value)}
+        type="range"
+        min="-1"
+        max="1"
+        step="1"
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        onKeyDown={handleKeyDown}
+        onMouseUp={center}
+        onTouchEnd={center}
+        onBlur={center}
+        style={{
+          width: 64,
+          accentColor: C.green,
+        }}
+      />
+    </Box>
+  );
+}
+
 function RudderStripChart({ value }) {
   const pct      = Math.abs(value) * 100;
   // Thresholds match sideslip gauge: 25 % ≈ 3° beta, 50 % ≈ 6° beta (beta ≈ rudder × 12)
@@ -506,6 +575,11 @@ function TelemetryDemo() {
   function handleThrottleChange(val) {
     controlsRef.current.throttle = val;
     setThrottle(val);
+  }
+
+  function handleRudderChange(val) {
+    controlsRef.current.rudder = val;
+    setRudder(val);
   }
 
   function applyOrientation(reading) {
@@ -1178,6 +1252,8 @@ function TelemetryDemo() {
             Tilt control denied. Use touch controls.
           </Typography>
         )}
+        <MobileThrottleSlider value={throttle} onChange={handleThrottleChange} />
+        <MobilePedalSlider value={rudder} onChange={handleRudderChange} />
         {panel}
       </Box>
     );
