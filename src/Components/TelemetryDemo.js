@@ -865,9 +865,9 @@ function TelemetryDemo() {
   if (state.g < 0)                               warnings.push({ label: 'NEG G',     color: C.amber });
   if (state.alt <= 500 && state.alt > 0)         warnings.push({ label: 'LOW ALT',   color: C.red });
 
-  const attitudeSize = isMobile ? 'min(48vw, 34svh, 210px)' : '260px';
-  const secondaryInstrumentSize = isMobile ? 'min(25vw, 96px)' : '160px';
-  const gaugeWidth = isMobile ? 'min(25vw, 96px)' : 160;
+  const attitudeSize = isMobile ? '150px' : '260px';
+  const secondaryInstrumentSize = isMobile ? '74px' : '160px';
+  const gaugeWidth = isMobile ? 74 : 160;
 
   function enterInteractive() {
     if (mode === MODE.RETURNING) {
@@ -964,7 +964,7 @@ function TelemetryDemo() {
       position: 'relative',
     }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: isMobile ? 'none' : 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box sx={{
             width: 8, height: 8, borderRadius: '50%',
@@ -1024,8 +1024,8 @@ function TelemetryDemo() {
       <Box sx={isMobile
         ? {
           display: 'grid',
-          gridTemplateColumns: 'minmax(68px, 1fr) minmax(130px, 1.5fr) minmax(68px, 1fr)',
-          gap: 1,
+          gridTemplateColumns: '1fr',
+          gap: 0.5,
           alignItems: 'start',
           px: '70px',
           pt: 10,
@@ -1036,7 +1036,12 @@ function TelemetryDemo() {
       }>
 
         {/* Left column: G-Load + Airspeed */}
-        <Stack alignItems="center" sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 0.5 : 0 }}>
+        <Stack
+          alignItems="center"
+          justifyContent="center"
+          direction={isMobile ? 'row' : 'column'}
+          sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 2 : 'initial' }}
+        >
           <GaugeComponent
             id="gauge-g"
             type="radial"
@@ -1053,9 +1058,9 @@ function TelemetryDemo() {
             style={{ width: gaugeWidth }}
             fadeInAnimation={false}
           />
-          <InstrumentLabel>G-LOAD</InstrumentLabel>
+          <InstrumentLabel>{isMobile ? 'G' : 'G-LOAD'}</InstrumentLabel>
 
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: isMobile ? 0.25 : 2 }}>
             <GaugeComponent
               id="gauge-ias"
               type="radial"
@@ -1074,13 +1079,15 @@ function TelemetryDemo() {
               style={{ width: gaugeWidth }}
               fadeInAnimation={false}
             />
-            <InstrumentLabel>AIRSPEED</InstrumentLabel>
-            <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
+            <InstrumentLabel>{isMobile ? 'IAS' : 'AIRSPEED'}</InstrumentLabel>
+            {!isMobile && (
+              <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem', letterSpacing: 1 }}>KIAS</Typography>
+            )}
           </Box>
         </Stack>
 
         {/* Center: Attitude + Heading */}
-        <Stack alignItems="center" spacing={1}>
+        <Stack alignItems="center" spacing={isMobile ? 0.25 : 1} sx={{ order: isMobile ? 1 : 'initial' }}>
           <AttitudeIndicator pitch={state.pitch} roll={state.roll} size={attitudeSize} showBox />
           <InstrumentLabel>ATTITUDE</InstrumentLabel>
           <HeadingIndicator heading={state.heading} size={secondaryInstrumentSize} showBox />
@@ -1088,7 +1095,12 @@ function TelemetryDemo() {
         </Stack>
 
         {/* Right column: Sideslip + Altimeter */}
-        <Stack alignItems="center" sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 0.5 : 0 }}>
+        <Stack
+          alignItems="center"
+          justifyContent="center"
+          direction={isMobile ? 'row' : 'column'}
+          sx={{ minWidth: isMobile ? 0 : 160, gap: isMobile ? 1 : 0, order: isMobile ? 3 : 'initial' }}
+        >
           <GaugeComponent
             id="gauge-beta"
             type="radial"
@@ -1107,11 +1119,11 @@ function TelemetryDemo() {
             style={{ width: gaugeWidth }}
             fadeInAnimation={false}
           />
-          <InstrumentLabel>SIDESLIP β</InstrumentLabel>
+          <InstrumentLabel>{isMobile ? 'BETA' : 'SIDESLIP β'}</InstrumentLabel>
 
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: isMobile ? 0.25 : 2 }}>
             <Altimeter altitude={state.alt} size={secondaryInstrumentSize} showBox />
-            <InstrumentLabel>ALTITUDE (FT AGL)</InstrumentLabel>
+            <InstrumentLabel>{isMobile ? 'ALT' : 'ALTITUDE (FT AGL)'}</InstrumentLabel>
             <Typography variant="caption" sx={{ color: '#3a4a5a', ...MONO, fontSize: '0.65rem' }}>
               {Math.round(state.alt).toLocaleString()}
             </Typography>
@@ -1217,7 +1229,7 @@ function TelemetryDemo() {
       )}
 
       {/* Footer */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+      <Box sx={{ display: isMobile ? 'none' : 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
         <Typography sx={{ color: '#2a3a4a', ...MONO, fontSize: '0.6rem', letterSpacing: 1 }}>
           SIMULATED — NOT REPRESENTATIVE OF ACTUAL VEHICLE
         </Typography>
