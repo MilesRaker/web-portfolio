@@ -33,8 +33,8 @@ describe('flight simulator utilities', () => {
   test('maps left and right phone tilt to left and right stick', () => {
     const neutral = createOrientationNeutral({ beta: 0, gamma: 0 });
 
-    expect(mapOrientationToStick({ beta: 0, gamma: -25 }, neutral).stickX).toBeCloseTo(-1);
-    expect(mapOrientationToStick({ beta: 0, gamma: 25 }, neutral).stickX).toBeCloseTo(1);
+    expect(mapOrientationToStick({ beta: 0, gamma: -25 }, neutral).stickX).toBeCloseTo(1);
+    expect(mapOrientationToStick({ beta: 0, gamma: 25 }, neutral).stickX).toBeCloseTo(-1);
   });
 
   test('applies a small deadband around neutral', () => {
@@ -46,8 +46,8 @@ describe('flight simulator utilities', () => {
   test('clamps extreme device orientation values', () => {
     const neutral = createOrientationNeutral({ beta: 0, gamma: 0 });
 
-    expect(mapOrientationToStick({ beta: 90, gamma: 90 }, neutral)).toEqual({ stickX: 1, stickY: 1 });
-    expect(mapOrientationToStick({ beta: -90, gamma: -90 }, neutral)).toEqual({ stickX: -1, stickY: -1 });
+    expect(mapOrientationToStick({ beta: 90, gamma: 90 }, neutral)).toEqual({ stickX: -1, stickY: 1 });
+    expect(mapOrientationToStick({ beta: -90, gamma: -90 }, neutral)).toEqual({ stickX: 1, stickY: -1 });
   });
 
   test('triggers the rotation prompt when airspeed crosses Vr once', () => {

@@ -28,7 +28,7 @@ export function mapOrientationToStick(reading, neutral) {
   const neutralGamma = Number(neutral?.gamma) || 0;
 
   return {
-    stickX: normalizeTilt(gamma - neutralGamma),
+    stickX: normalizeTilt(neutralGamma - gamma),
     stickY: normalizeTilt(beta - neutralBeta),
   };
 }
