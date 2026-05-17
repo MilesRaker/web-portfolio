@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Button, Typography, Chip, Stack, useMediaQuery } from '@mui/material';
 import { AttitudeIndicator, Altimeter, HeadingIndicator } from 'react-typescript-flight-indicators';
 import GaugeComponent from 'react-gauge-component';
+import {
+  ROTATION_SPEED,
+  clamp,
+} from './flightSimulatorUtils';
 
 const SCRIPT = [
   // ── Takeoff roll ──────────────────────────────────────────────────────────
@@ -81,10 +85,9 @@ function sample(elapsedMs) {
 
 // ── Physics ───────────────────────────────────────────────────────────────────
 
-const STALL_SPEED    = 120;
+const STALL_SPEED = ROTATION_SPEED;
 const OVERSPEED_WARN = 370;
 
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function toRad(deg)        { return deg * Math.PI / 180; }
 
 const INIT_PHYSICS = {
