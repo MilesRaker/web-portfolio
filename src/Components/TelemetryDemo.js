@@ -751,12 +751,24 @@ function TelemetryDemo() {
     }
   }
 
+  function openMobileSimulator() {
+    controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.05, rudder: 0 };
+    setThrottle(0.05);
+    setRudder(0);
+    setLandingResult(null);
+    setRollTimeLeft(30);
+    resetPhysics({ ...INIT_PHYSICS });
+    prevAltRef.current = INIT_PHYSICS.alt;
+    setMode(MODE.INTERACTIVE);
+    setMobileOpen(true);
+  }
+
   if (isMobile && !mobileOpen) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Button
           variant="outlined"
-          onClick={() => setMobileOpen(true)}
+          onClick={openMobileSimulator}
           sx={{ ...MONO, fontSize: '0.75rem', letterSpacing: 1, color: C.green, borderColor: C.green }}
         >
           Click for flight simulator
@@ -1067,6 +1079,14 @@ function TelemetryDemo() {
           overflow: 'hidden',
         }}
       >
+        <Button
+          aria-label="Recenter"
+          onClick={() => {}}
+          sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2, color: C.text, borderColor: C.dim }}
+          variant="outlined"
+        >
+          Recenter
+        </Button>
         <Button
           aria-label="Exit"
           onClick={() => setMobileOpen(false)}

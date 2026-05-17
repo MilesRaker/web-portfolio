@@ -61,3 +61,12 @@ test('opens and closes the mobile full-screen overlay', () => {
   expect(screen.queryByRole('dialog', { name: /flight simulator/i })).not.toBeInTheDocument();
   expect(document.body.style.overflow).toBe('');
 });
+
+test('mobile overlay starts in manual control mode', () => {
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(screen.queryByRole('button', { name: /click to take control/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /recenter/i })).toBeInTheDocument();
+});
