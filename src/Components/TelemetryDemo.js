@@ -918,7 +918,23 @@ function TelemetryDemo() {
     }
   }
 
+  function requestMobileFullscreen() {
+    const root = document.documentElement;
+    if (!root || typeof root.requestFullscreen !== 'function') return;
+
+    root.requestFullscreen().catch(() => {});
+  }
+
+  function closeMobileSimulator() {
+    setMobileOpen(false);
+
+    if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
   function openMobileSimulator() {
+    requestMobileFullscreen();
     controlsRef.current = { stickX: 0, stickY: 0, throttle: 0.05, rudder: 0 };
     setThrottle(0.05);
     setRudder(0);
@@ -1288,7 +1304,7 @@ function TelemetryDemo() {
         </Button>
         <Button
           aria-label="Exit"
-          onClick={() => setMobileOpen(false)}
+          onClick={closeMobileSimulator}
           sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, color: C.text, borderColor: C.dim }}
           variant="outlined"
         >

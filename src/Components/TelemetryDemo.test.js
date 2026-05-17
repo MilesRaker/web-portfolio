@@ -28,6 +28,9 @@ function renderMobile() {
 beforeEach(() => {
   jest.useFakeTimers();
   useMediaQuery.mockReset();
+  document.fullscreenElement = null;
+  document.documentElement.requestFullscreen = undefined;
+  document.exitFullscreen = undefined;
 });
 
 afterEach(() => {
@@ -60,6 +63,31 @@ test('opens and closes the mobile full-screen overlay', () => {
 
   expect(screen.queryByRole('dialog', { name: /flight simulator/i })).not.toBeInTheDocument();
   expect(document.body.style.overflow).toBe('');
+});
+
+test('mobile launch requests browser fullscreen when available', () => {
+  const requestFullscreen = jest.fn().mockResolvedValue(undefined);
+  document.documentElement.requestFullscreen = requestFullscreen;
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+
+  expect(requestFullscreen).toHaveBeenCalledTimes(1);
+});
+
+test('mobile exit leaves browser fullscreen when active', () => {
+  const exitFullscreen = jest.fn().mockResolvedValue(undefined);
+  document.exitFullscreen = exitFullscreen;
+  Object.defineProperty(document, 'fullscreenElement', {
+    configurable: true,
+    value: document.documentElement,
+  });
+  renderMobile();
+
+  userEvent.click(screen.getByRole('button', { name: /click for flight simulator/i }));
+  userEvent.click(screen.getByRole('button', { name: /exit/i }));
+
+  expect(exitFullscreen).toHaveBeenCalledTimes(1);
 });
 
 test('mobile overlay starts in manual control mode', () => {
