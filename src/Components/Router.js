@@ -8,8 +8,9 @@ import Resume from './Resume';
 import Values from './Values';
 import Projects from './Projects';
 
-// three.js is only downloaded when someone opens /proteus
+// three.js is only downloaded when someone opens /proteus or /voyager
 const ProteusViewer = lazy(() => import('./ProteusViewer'));
+const VoyagerViewer = lazy(() => import('./VoyagerViewer'));
 
 export default function Router (){
 
@@ -25,6 +26,7 @@ export default function Router (){
                         <Route className="projects" path='/projects' element={<Projects />} />
                         <Route className="values" path='/values' element={<Values />} />
                         <Route className="proteus" path='/proteus' element={<Suspense fallback={null}><ProteusViewer /></Suspense>} />
+                        <Route className="voyager" path='/voyager' element={<Suspense fallback={null}><VoyagerViewer /></Suspense>} />
                     </Routes>
                 </div>
 
