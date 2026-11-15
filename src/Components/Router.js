@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Homepage from './Homepage';
 import customTheme from './ThemeProvider';
@@ -7,6 +7,9 @@ import { Container, ThemeProvider } from '@mui/material/'
 import Resume from './Resume';
 import Values from './Values';
 import Projects from './Projects';
+
+// three.js is only downloaded when someone opens /proteus
+const ProteusViewer = lazy(() => import('./ProteusViewer'));
 
 export default function Router (){
 
@@ -21,6 +24,7 @@ export default function Router (){
                         <Route className="resume" path='/resume' element={<Resume />} />
                         <Route className="projects" path='/projects' element={<Projects />} />
                         <Route className="values" path='/values' element={<Values />} />
+                        <Route className="proteus" path='/proteus' element={<Suspense fallback={null}><ProteusViewer /></Suspense>} />
                     </Routes>
                 </div>
 
