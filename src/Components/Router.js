@@ -8,10 +8,11 @@ import Resume from './Resume';
 import Values from './Values';
 import Projects from './Projects';
 
-// three.js is only downloaded when someone opens /proteus, /voyager or /long-ez
+// three.js is only downloaded when someone opens /proteus, /voyager, /long-ez or /asthma
 const ProteusViewer = lazy(() => import('./ProteusViewer'));
 const VoyagerViewer = lazy(() => import('./VoyagerViewer'));
 const LongEZViewer = lazy(() => import('./LongEZViewer'));
+const AsthmaSimulation = lazy(() => import('./AsthmaSimulation'));
 
 export default function Router (){
 
@@ -29,6 +30,7 @@ export default function Router (){
                         <Route className="proteus" path='/proteus' element={<Suspense fallback={null}><ProteusViewer /></Suspense>} />
                         <Route className="voyager" path='/voyager' element={<Suspense fallback={null}><VoyagerViewer /></Suspense>} />
                         <Route className="long-ez" path='/long-ez' element={<Suspense fallback={null}><LongEZViewer /></Suspense>} />
+                        <Route className="asthma" path='/asthma' element={<Suspense fallback={null}><AsthmaSimulation /></Suspense>} />
                     </Routes>
                 </div>
 
