@@ -128,6 +128,7 @@ Configured in `ThemeProvider.js`:
 | `/resume` | `Resume.js` | Done | Interactive resume rendered from Markdown; includes Skills visualization and Telemetry Demo |
 | `/projects` | `Projects.js` | Done | Project cards for featured engineering work |
 | `/values` | `Values.js` | Done | Six personal values in an MUI Accordion layout |
+| `/asthma` | `AsthmaSimulation.js` | Done | 3D airway simulation of an asthma attack and albuterol relief (Blender model, Three.js); page served from `public/asthma-sim/asthma-sim.txt` |
 
 ---
 
