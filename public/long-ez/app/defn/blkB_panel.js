@@ -1,0 +1,90 @@
+// LEZ-31-100 instrument panel and glareshield: the definition record (numbers from wpB3). The panel bulkhead and its
+// layout (block B owns it; the avionics and electrical blocks match their equipment to it), the glareshield hood, the
+// pass-through holes and the re-route asks. Solid: the sandwich layers and the hood extruded along FS (cad/blkB_prims.py).
+// Inches; x = BL, y = FS, z = WL. Notional.
+import { GEO, MATSYS, fusAt } from '../structures.js';
+import { PROCESS } from '../plybook.js';
+import { PNL, PANEL, HOOD, CUTS, DECLARED, HOLES, CRANK, cutDist, edgeDist, insidePoly, panelParams, PNL_RHO, panelArea, eqMass, passAudit, openOnly, OPEN_OWNER } from '../parts/wpB3_panel.js';
+import { canPt, tCut, CANF } from '../parts/wpB1_canopy.js';
+import { FUS, layer } from '../parts/wp26_fuselage.js';
+import { groupVols, massFrom } from './blkB_prims.js';
+import { fx, TODAY } from './blkB_common.js';
+import { KEYSW } from '../parts/wpH1_layout.js';
+import { geaPrims } from '../parts/wpH4_prims.js';
+import { LAM_ALLOW, LAM_SPEC, LAM_FORM, LAM_CURE, ppBuy, PP_VENDOR, PP_PRICE } from './p_common.js';
+/** final integration (block H's open items, ICD h_engsys §7.5): the key switch's spot-face and the GEA 24 shelf flange's nutplates */
+const SPOT = { c: [KEYSW.c[0], KEYSW.c[1]], d: KEYSW.spot.d, depth: KEYSW.spot.depth, from: KEYSW.spot.from };   // integration 2026-11-19 (ICD B-S2): a counterbore from the pilot face for the bezel nut; the body seats on the forward face
+const GEA_FL = () => geaPrims().find((p) => p.feat === 'shelf' && p.d[1] < 0.1);
+/** 2 × MS21047L08 (#8) nutplates on the panel's forward face behind the flange: 0.5 in in from its ends, at its mid-height; footprint 1.0 × 0.4 in (rivets along BL, typed) */
+export const GEA_NP = () => { const f = GEA_FL(), x0 = f.c[0] - f.d[0] / 2, x1 = f.c[0] + f.d[0] / 2; return [x0 + 0.5, x1 - 0.5].map((x) => ({ c: [x, f.c[2]], hole: 0.164, fp: [1.0, 0.4] })); };
+
+const cutPts = (C) => (C.rect ? [[C.rect[0], C.rect[2]], [C.rect[1], C.rect[2]], [C.rect[1], C.rect[3]], [C.rect[0], C.rect[3]]] : Array.from({ length: 16 }, (_, i) => [C.circ[0] + C.circ[2] * Math.cos(i * Math.PI / 8), C.circ[1] + C.circ[2] * Math.sin(i * Math.PI / 8)]));
+export const cutSize = (C) => (C.rect ? `${fx(C.rect[1] - C.rect[0])} × ${fx(C.rect[3] - C.rect[2])}` : `Ø ${fx(2 * C.circ[2], 3)}`);
+export const cutCentre = (C) => (C.rect ? [(C.rect[0] + C.rect[1]) / 2, (C.rect[2] + C.rect[3]) / 2] : [C.circ[0], C.circ[1]]);
+const minWeb = () => { let m = Infinity; for (const A of CUTS) for (const B of CUTS) if (A !== B) for (const q of cutPts(A)) m = Math.min(m, cutDist(q, B)); return m; };
+const minEdge = () => Math.min(...CUTS.flatMap((C) => cutPts(C).map((q) => (insidePoly(q, PANEL.pts) ? edgeDist(q) : -1))));
+const holeWorst = () => { let w = Infinity; for (const h of HOLES.holes) { w = Math.min(w, (edgeDist([h.y, h.z]) - h.r) / 0.5, ...CUTS.map((C) => (cutDist([h.y, h.z], C) - h.r) / 0.5), ...HOLES.holes.filter((g) => g !== h && !openOnly(g) && !openOnly(h)).map((g) => (Math.hypot(g.y - h.y, g.z - h.z) - g.r - h.r) / 0.25)); } return w; };
+/** hole pairs short of the 0.25 in ligament where one hole carries only lines of blocks not started (I, J): their asks */
+export const crowdAsks = () => { const out = []; const H = HOLES.holes; for (let i = 0; i < H.length; i++) for (let j = i + 1; j < H.length; j++) { const a = H[i], b = H[j], lig = Math.hypot(a.y - b.y, a.z - b.z) - a.r - b.r; if (lig < 0.25 && (openOnly(a) || openOnly(b))) { const o = openOnly(a) ? a : b, x = o === a ? b : a; out.push(`${o.id} (${o.pns.join(', ')}; ${[...new Set(o.pns.map(OPEN_OWNER))].join('/')}) ${lig.toFixed(2)} in from ${x.id}: move the bundle ${(0.25 - lig + 0.05).toFixed(2)} in away or route it with the other`); } } return out; };
+// the canopy front bow's inner surface at the panel station: the least clearance to the panel's top and to the bezels
+const BEZEL = { axis: 0.43, g5: 0.20, elt: 0.20 };
+export function bowClear() {
+  const s = PNL.s, ti = tCut(s, -CANF.t), bow = Array.from({ length: 121 }, (_, i) => canPt(s, ti + (Math.PI - 2 * ti) * i / 120, -CANF.t));
+  const dist = (q) => Math.min(...bow.map((b) => Math.hypot(b[0] - q[0], b[1] - q[1])));
+  const top = PANEL.pts.filter((q) => q[1] > PANEL.zSill + 0.01), bz = CUTS.filter((C) => BEZEL[C.id] != null).flatMap((C) => { const b = BEZEL[C.id]; return C.rect ? [[C.rect[0] - b, C.rect[3] + b], [C.rect[1] + b, C.rect[3] + b]] : [[C.circ[0] - C.circ[2] - b, C.circ[1] + C.circ[2] + b], [C.circ[0] + C.circ[2] + b, C.circ[1] + C.circ[2] + b], [C.circ[0], C.circ[1] + C.circ[2] + b]]; });
+  return { top: Math.min(...top.map(dist)), bezel: Math.min(...bz.map(dist)) };
+}
+// the hood under the closed deck forward of the opening (FS 38.7): its top vs the deck's inner surface
+const hoodDeck = () => { const s = PNL.hoodFwd / 12, f = (t, off) => { const p = canPt(s, t, off); return p; }; void f; const ti = Math.PI / 2, deck = canPt(s, ti, -FUS.t); return deck[1] - Math.max(...HOOD.pts.map((q) => q[1])); };
+const shellSill = () => { const L = layer(PNL.s, -FUS.t + 1e-9, -FUS.t - 0.001, true, 1); return Math.abs(L[FUS.n][0] - PANEL.ySill); };
+const askOk = () => HOLES.asks.every((a) => DECLARED.some((d) => d.owner.includes(a.pn)));
+const V = () => groupVols(panelParams().prims);
+const PRICE = { BID: PP_PRICE.fab, H45sheet: +(PP_PRICE.coreFt2Qtr * 8 * 1.5).toFixed(2), L285gal: 0, H287qt: 0 };
+export const PNL_DEF = {
+  pn: 'LEZ-31-100', rev: 'C', status: 'released', nha: 'LEZ-000 (aircraft)', qty: 1, kind: 'laminate',
+  title: 'Instrument panel and glareshield',
+  solidText: 'CadQuery solid: faces and core extruded along FS with every cut-out and hole; the hood extruded forward under the deck',
+  templates: 'Full-size panel template with the cut-outs and hole centres (aft face); hood contour template at FS 40.9',
+  revs: [{ rev: 'A', date: TODAY, short: 'Initial definition', change: `Initial definition. The panel was a 0.48 in box with an assumed mass; the J records' faces overlapped (display over the switches and breakers) and eleven lines crossed it inside the cut-outs. As defined the panel is a bulkhead ${fx(PNL.t, 2)} in thick at FS ${fx(PNL.fwd, 2)}–${fx(PNL.aft, 2)}, bonded below the sills, under the canopy bow by ${PNL.bowGap} in above them, held there by the glareshield hood bonded under the nose deck. Block B sets the layout (${CUTS.length} cut-outs, webs ≥ 0.5 in), ${HOLES.holes.length} holes for the lines through it, and two declared holes for the lines that must move.` }, { rev: 'B', date: TODAY, short: 'Key spot-face, GEA shelf nutplates', change: `Final integration (block H's open items, ICD h_engsys §7.5): a Ø ${SPOT.d} × ${SPOT.depth} spot-face from the forward face at the key switch in a flox hard point (the panel is ${PNL.t} in, the switch's bushing grips ${KEYSW.bushing.grip}), and 2 × MS21047L08 nutplates for the GEA 24 shelf flange. Rules keyspot, keyedge, geanp; interfaces I7, I8. No change to the laminate or the solid (installation features).` },
+    { rev: 'C', date: '2026-11-19', short: 'Pass-throughs from the swept footprint', change: `Miles's report: wire routes still collided with the panel. The rev B hole table sized each hole from the line's crossing of the mid-plane only; the lines cross the ${fx(PNL.t, 3)} in slab at an angle (some through a bend), so nine runs cut into the web, the rim of their hole or the bonded edge (power harness 0.77 in deep, console harness 0.32, ELT 0.30, P-leads 0.20, rudder cables 0.17, pitot-static 0.10, COM 0.06, GEA 0.04, tip lights 0.002). As revised: every hole is sized from the line's swept footprint through the whole thickness (the tube at both faces and between, its radius and its clearance), merged round the bundle where holes come within 0.25 in, and keeps 0.5 in to the cut-outs and the outline; the hole table is built after every parts module has loaded, so lines re-routed later are in it. The lines that could not get a legal hole were re-routed by their owners (C rudder cables; H P-leads and GEA harness; I power, starter, ground and tip-light runs below the bottom cut, the canopy-switch lead; J console harness, GMU harness, pitot-static lines, COM, transponder and ELT remote runs), none notched; the glareshield hood is clear of every line. New check pnl-slab (every line sampled through the panel's and the hood's thickness clear of the material in its hole); the declared holes H-PR and H-CR are no longer needed. ${HOLES.holes.filter((h) => h.kind === 'pass').length} pass holes.` }],
+  effectivity: 'One per aircraft', params: panelParams(),
+  datums: [{ id: 'A', what: `Aft face, FS ${fx(PNL.aft, 3)}` }, { id: 'B', what: 'Centre line, BL 0' }, { id: 'C', what: `Bottom edge, WL ${fx(PNL.bot, 2)}` }],
+  features: [
+    { id: 'panel', kind: 'layup', label: `${PNL.faceBID} × 6781 ±45 each face on ${PNL.coreIn} in Divinycell HT61; outline the shell's inner contour below the sills (BL ±${fx(PANEL.ySill)} at WL ${fx(PANEL.zSill)}), ${PNL.bowGap} in under the canopy bow above them, bottom WL ${fx(PNL.bot, 1)} (legs pass under)`, tol: 'Contour ±1/32 in to the template' },
+    { id: 'hood', kind: 'layup', label: `Glareshield hood: ${PNL.hoodBID} × 6781 each face on ${PNL.hoodCore} in HT61, FS ${fx(HOOD.u0, 1)}–${fx(HOOD.u1, 2)}, ${PNL.hoodGap} in under the deck and bow; bonded to the deck on a flox bed forward of FS ${fx(GEO.canopy[0] * 12, 1)}, taped to the panel's forward face`, tol: '±1/16 in' },
+    ...CUTS.map((C) => ({ id: C.id, kind: 'hole', label: `${C.what}: ${cutSize(C)} at BL ${fx(cutCentre(C)[0])}, WL ${fx(cutCentre(C)[1])} (${C.pn}); ${C.src}`, tol: '±0.03 in; nutplates potted' })),
+    { id: 'keyspot', kind: 'hole', label: `Key-switch 7/8 in notched hole with a counterbore Ø ${SPOT.d} × ${SPOT.depth} deep from the ${SPOT.from} (bezel nut) at BL ${fx(SPOT.c[0])}, WL ${fx(SPOT.c[1])}, in a Ø ${fx(KEYSW.body.d + 0.25, 2)} flox hard point potted through the core, leaving ${fx(PNL.t - SPOT.depth, 3)} in for the switch's ${KEYSW.bushing.grip} in bushing grip; the Ø ${KEYSW.body.d} body seats on the uncut forward face (block H's LEZ-74-100; counterbore Ø BOUND, the bezel nut OD is not published)`, tol: 'Depth ±0.01; flat to the switch face' },
+    { id: 'geanp', kind: 'hole', label: `Rev B: 2 × MS21047L08 nutplates for the GEA 24 shelf flange (block H's LEZ-77-100) on the forward face at BL ${GEA_NP().map((q) => fx(q.c[0])).join(' / ')}, WL ${fx(GEA_NP()[0].c[1])}, in Ø 0.5 flox inserts`, tol: '±0.03 in; drilled through the flange' },
+    { id: 'pass', kind: 'hole', label: `${HOLES.holes.length} pass-through holes (hole table), grommeted, each over its lines' swept footprint through the thickness with their clearance (rev C); ${DECLARED.length} declared for lines that must re-route`, tol: '±0.06 in position' },
+  ],
+  tolerances: { general: '.X ±0.06 · .XX ±0.03 · contour ±1/32', flatness: 'Flat within 1/16 in', holes: 'Cut-outs ±0.03 in; pass-throughs ±0.06 in', breakEdges: 'Every cut edge and hole sealed with resin or flox' },
+  drawingNotes: ['Ply IDs: P-F/A faces, P-T tapes, P-H hood. Viewed from aft (BL + right).'], generalNote: 'Cured laminate tap-tested; display and instrument nutplates in Ø 0.5 in flox inserts.', na: {},
+  material: { spec: '6781 S2-glass, MTM45-1 prepreg (NCAMP), Divinycell HT61 3/8 in (panel) and 1/4 in (hood), flox inserts', alt: 'None', form: `${LAM_FORM()}, flat on the table`, density: null,
+    allowables: [...LAM_ALLOW(false)] },
+  process: [{ op: 'Layup', spec: `Panel flat on the table (${PNL.faceBID} × 6781 / ${PNL.coreIn} HT61 / ${PNL.faceBID} × 6781), inserts potted; hood on its contour template. Bag and cure on the NCAMP M cycle (250 ± 10 °F, 4–6 h, ≥ 28 inHg; no post-cure), the part whole in the oven; witness coupon.` },
+    { op: 'Cut', spec: 'Outline, cut-outs and holes to the template; seal the edges.' },
+    { op: 'Install', spec: `In the fuselage at FS ${fx(PNL.fwd, 2)}: flox fillets and ${PNL.tape.n} × 6781 × ${2 * PNL.tape.lap} in tapes both faces below the sills; hood bonded under the deck on a flox bed and taped to the panel.` }],
+  checks: ['pnl-bend', 'pnl-tape', 'pnl-mount', 'pnl-slab'],
+  rules: [{ id: 'web', label: 'Web between cut-outs ≥ 0.5 in', v: minWeb(), min: 0.5 }, { id: 'edge', label: 'Cut-outs ≥ 0.5 in inside the outline', v: minEdge(), min: 0.5 },
+    { id: 'holes', label: 'Holes (rev C): ≥ 0.5 in to the outline and the cut-outs, ≥ 0.25 in to each other (ratio)', v: holeWorst(), min: 1 },
+    { id: 'keyspot', label: 'Key spot-face: remaining panel ≤ the bushing grip and ≥ 0.10 in (grip − remaining, in)', v: Math.min(KEYSW.bushing.grip - (PNL.t - SPOT.depth), PNL.t - SPOT.depth - 0.10), min: 0 },
+    { id: 'keyedge', label: 'Key spot-face ≥ 0.25 in inside the outline and from every other cut-out (in)', v: Math.min(edgeDist(SPOT.c) - SPOT.d / 2, ...CUTS.filter((C) => C.id !== 'key').map((C) => cutDist(SPOT.c, C) - SPOT.d / 2)), min: 0.25 },
+    { id: 'keybody', label: 'Key switch body (Ø 2.23) on the forward face clear of every other cut-out by ≥ 0.10 in (in)', v: Math.min(...CUTS.filter((C) => C.id !== 'key').map((C) => cutDist(SPOT.c, C) - KEYSW.body.d / 2)), min: 0.10 },
+    { id: 'geanp', label: 'GEA flange nutplates: footprint ≥ 0.25 in from every cut-out, ≥ 0.5 in inside the outline (in)', v: Math.min(...GEA_NP().flatMap((q) => [-1, 1].flatMap((i) => [-1, 1].map((j) => [q.c[0] + i * q.fp[0] / 2, q.c[1] + j * q.fp[1] / 2]))).flatMap((p) => [edgeDist(p) - 0.25, ...CUTS.map((C) => cutDist(p, C))])), min: 0.25 }, { id: 'legs', label: 'Leg opening under the panel ≥ 6.5 in (in)', v: PNL.bot - (fusAt(PNL.s).bot * 12 + FUS.t), min: 6.5 }],
+  mass: { each: massFrom(V(), PNL_RHO), from: 'layer volumes × density (6781, HT61, hood sandwich); checked against the solid' },
+  hardware: [], hardwareNote: `Equipment hardware is on the equipment records; the panel carries ${CUTS.length} cut-outs with potted nutplates (display: 4 × #8-32).`,
+  interfaces: [
+    { id: 'I1', with: 'LEZ-53-150 shell', feature: 'panel', what: 'Outline is the shell\'s inner contour below the sills', check: () => { const e = shellSill(); return { ok: e < 0.01, detail: `sill corner ${fx(e, 4)} in off the shell's inner sill` }; } },
+    { id: 'I2', with: 'LEZ-56-100 canopy front bow', feature: 'hood', what: 'Panel top and the bezels ≥ 0.25 in under the bow\'s inner surface (worst closed; opening moves the bow away)', check: () => { const b = bowClear(); return { ok: b.top >= 0.249 && b.bezel >= 0.25, detail: `panel top ${fx(b.top, 3)} in, bezels ${fx(b.bezel, 3)} in` }; } },
+    { id: 'I3', with: 'Nose deck (LEZ-53-150)', feature: 'hood', what: 'Hood under the deck on a flox bed (0.1–0.4 in)', check: () => { const g = hoodDeck(); return { ok: g >= 0.1 && g <= 0.4, detail: `${fx(g, 3)} in at FS ${fx(PNL.hoodFwd, 1)}` }; } },
+    ...(crowdAsks().length ? [{ id: 'I6', with: 'I / J (lines through the panel)', feature: 'open', what: 'OPEN (I / J): pass-through spacing', open: true, check: () => ({ ok: true, detail: `OPEN item, owners I / J: ${crowdAsks().join('; ')}` }) }] : []),
+    { id: 'I4', with: 'Lines through the panel (C, E, I, J)', feature: 'pass', what: 'Every crossing outside a cut-out has a hole; each crossing inside one has a declared hole for its owner', check: () => { const A = passAudit(); return { ok: askOk() && A.ok, detail: `${A.n} live crossings${A.bad.length ? `; NOT IN A HOLE: ${A.bad.join('; ')}` : ''}${A.idle.length ? `; holes with no line: ${A.idle.join(', ')}` : ''}; ${HOLES.holes.length} holes; re-route asks: ${HOLES.asks.map((a) => `${a.pn} → ${DECLARED.find((d) => d.owner.includes(a.pn))?.id || 'NONE'}`).join(', ') || 'none'}` }; } },
+    { id: 'I7', with: 'LEZ-74-100 key switch S1 (block H, KEYSW)', feature: 'keyspot', what: 'Key cut-out 7/8 in on H\'s switch axis; the pilot-face counterbore leaves ≤ the bushing grip; the body seats on the uncut forward face (ICD B-S2)', check: () => { const k = CUTS.find((C) => C.id === 'key'), off = Math.hypot(k.circ[0] - SPOT.c[0], k.circ[1] - SPOT.c[1]), rem = PNL.t - SPOT.depth; return { ok: off <= 0.01 && Math.abs(2 * k.circ[2] - 0.875) < 1e-6 && /aft/.test(SPOT.from) && rem <= KEYSW.bushing.grip + 1e-9 && rem >= 0.10 && SPOT.d >= KEYSW.bushing.d, detail: `Ø ${fx(2 * k.circ[2], 3)} cut-out on the switch axis (${fx(off, 3)} in); counterbore Ø ${SPOT.d} × ${SPOT.depth} from the ${SPOT.from}: ${fx(rem, 3)} in left for the ${KEYSW.bushing.grip} in grip; body Ø ${KEYSW.body.d} on the forward face` }; } },
+    { id: 'I8', with: 'LEZ-77-100 GEA 24 shelf flange (block H)', feature: 'geanp', what: 'Both nutplates behind the flange: screw holes ≥ 2 D inside the flange edges; the flange on the forward face', check: () => { const f = GEA_FL(), q = GEA_NP(), e = Math.min(...q.flatMap((n) => [n.c[0] - (f.c[0] - f.d[0] / 2), f.c[0] + f.d[0] / 2 - n.c[0], n.c[1] - (f.c[2] - f.d[2] / 2), f.c[2] + f.d[2] / 2 - n.c[1]])) / q[0].hole, face = Math.abs(f.c[1] + f.d[1] / 2 - PNL.fwd);
+      return { ok: q.length === 2 && e >= 2 && face <= 0.01, detail: `2 nutplates at BL ${q.map((n) => fx(n.c[0])).join(' / ')}, WL ${fx(q[0].c[1])}: holes ${fx(e, 1)} D inside the flange; flange ${fx(face, 3)} in off the forward face` }; } },
+    { id: 'I5', with: 'LEZ-32-214 gear crank (E)', feature: 'pass', what: 'Crank handle sweep clears every cut-out by ≥ 0.25 in', check: () => { const m = Math.min(...CUTS.map((C) => cutDist(CRANK.c, C) - CRANK.sweep)); return { ok: m >= 0.25, detail: `${fx(m)} in (sweep R ${fx(CRANK.sweep)} about BL ${fx(CRANK.c[0])}, WL ${fx(CRANK.c[1])})` }; } },
+  ],
+  tooling: { needed: true, text: 'Full-size panel template (aft face) with every cut-out and hole centre; hood contour template.' },
+  sourcing: { blank: '3 yd 6781 (38 in); 1 sheet 3/8 in HT61 (panel), 1/4 in scrap (hood); 0.15 gal (no resin: prepreg)', vendor: PP_VENDOR.vendor, url: PP_VENDOR.url, cost: 3 * PRICE.BID + PRICE.H45sheet + 0.15 * (PRICE.L285gal + 2 * PRICE.H287qt), costAsOf: TODAY, perAircraft: 1, lead: 'Stock items', note: 'Prices approximate.' },
+};
+void eqMass; void panelArea;
