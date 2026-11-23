@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "route": "/project-manager", "redirect": "https://pm.milesraker.com/", "statusCode": 302 },
+    { "route": "/project-manager/*", "redirect": "https://pm.milesraker.com/", "statusCode": 302 }
+  ]
+}
