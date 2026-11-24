@@ -1406,12 +1406,37 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 resize();
 const tick = () => new Promise((r) => setTimeout(r, 20));
+/** The appearance model's seats were wider and longer than the defined cabin: the front seat back's outer edges ran into
+ *  the strake-to-fuselage close-out (LEZ-57-150) and its upper-left corner into the canopy latch rod (LEZ-52-120); the rear
+ *  seat ran aft of the rear seat bulkhead (LEZ-53-175, FS 104.7) through the ELT, and its sides over the engine-control
+ *  cables, the fuel-selector drive and the primer line along the cabin walls. Fitted here (vertex warp in the model's
+ *  station frame, cushions and belts alike) so they clear every system part; checked by a mesh-intersection pass. */
+function fitSeats(root) {
+  root.updateMatrixWorld(true);
+  const v = new THREE.Vector3(), inv = new THREE.Matrix4(), IN = FTM / 12;   // world metres ↔ model inches
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
+  const warp = {
+    // front: 1.5 % narrower overall; the upper back (WL 38.5 → 40) aft of FS 69 → 70.5 tapers to 80 % width
+    FrontSeat: (p) => { const fs = p.z / IN, wl = p.y / IN, w = clamp01((wl - 38.5) / 1.5) * clamp01((fs - 69) / 1.5); p.x *= 0.985 * (1 - 0.2 * w); },
+    // rear: 80 % width; stations from FS 83.1 compressed so the back ends at FS 104.2, 0.5 in ahead of the rear seat bulkhead
+    RearSeat: (p) => { p.x *= 0.8; const fs = p.z / IN; p.z = (83.1 + (fs - 83.1) * (104.2 - 83.1) / (109.1 - 83.1)) * IN; },
+  };
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    let n = o, key = null;
+    while (n && !key) { key = Object.keys(warp).find((k) => (n.name || '').startsWith(k)); n = n.parent; }
+    if (!key) return;
+    const g = o.geometry = o.geometry.clone(), P = g.attributes.position; inv.copy(o.matrixWorld).invert();
+    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); warp[key](v); v.applyMatrix4(inv); P.setXYZ(i, v.x, v.y, v.z); }
+    P.needsUpdate = true; g.computeBoundingSphere(); g.computeBoundingBox();
+  });
+}
 (async () => {
   const L = (t) => { $('loading').textContent = t; };
 
   const T = [];
   let t = performance.now();
-  const lap = (n) => { const now = performance.now(); T.push(`${n} ${(now - t).toFixed(0)} ms`); t = now; L(`${T.join(' · ')} …`); };
+  const lap = (n) => { const now = performance.now(); T.push(`${n} ${(now - t).toFixed(0)} ms`); t = now; };   // timings go to the console; the corner indicator shows the step
   // First view: the Definition tab from its audit cache and the airframe, before the analysis; the loading line becomes
   // a small corner note and the 3D view can be orbited while the load cases run (a few tens of ms per task). The other
   // tabs fill when the analysis is done; until then they say so.
@@ -1423,6 +1448,7 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
     const str = atob(b64), bin = new Uint8Array(str.length); for (let i = 0; i < str.length; i++) bin[i] = str.charCodeAt(i);   // a plain loop: Uint8Array.from with a callback is ~10x slower on 2 MB
     new GLTFLoader().parse(bin.buffer, '', (gltf) => {
       airframe = gltf.scene;
+      fitSeats(airframe);
       airframe.traverse((o) => {
         if (!o.isMesh) return;
         let n = o.name, p = o;
@@ -1437,23 +1463,31 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
     }, (e) => { $('loading').textContent = 'Could not read the model'; console.error(e); resolve(); });
   }));
   lap('airframe'); window.__lezFirstView = Math.round(performance.now());
-  $('loading').classList.add('pill');
+  // the loading indicator becomes a small spinning pill in the 3D view's upper-left corner, just under the mode label
+  // (and the top bar when that wraps onto the left), until the analysis, the systems and the nose gear are all in
+  const pill = $('loading'); pill.classList.add('pill');
+  const placePill = () => {
+    const st = $('stage').getBoundingClientRect(); let top = 12;
+    for (const id of ['mode', 'topbar']) { const r = $(id).getBoundingClientRect(); if (r.width && r.left - st.left < 280) top = Math.max(top, r.bottom - st.top + 6); }
+    pill.style.top = `${Math.round(top)}px`;
+  };
+  placePill(); const pillRO = new ResizeObserver(placePill); pillRO.observe($('stage'));
   const d = { ...design };
-  L('Sizing plies…'); await tick();
+  L('Loading · sizing plies…'); await tick();
   await calm();
   if (SYS.ADOPTED.size) { massModel(d); lap('sizing and mass model'); await tick(); }
-  L('Running the structural analysis (42 load cases)…'); await tick();
+  L('Loading · structural analysis (42 load cases)…'); await tick();
   const ch = new MessageChannel(), pause = () => new Promise((r) => { ch.port1.onmessage = () => r(); ch.port2.postMessage(0); });
   R = await S.analyseAsync(d, pause, () => (busy() ? 8 : 100)); lap('42 load cases');   // short slices while the user orbits, so frames keep coming   // the same result as S.analyse(d, false), ≤ ~0.2 s per task
-  await tick(); await calm();
+  L('Loading · ply book, systems and gear…'); await tick(); await calm();
   finishRun(); lap('ply book');
-  await tick(); await calm();
+  L('Loading · panels…'); await tick(); await calm();
   fillCaseSelects(); renderPartList(); renderEnvTables(); renderMats();
   document.querySelectorAll('.pane.waiting').forEach((p) => p.classList.remove('waiting'));
   showTab(tabNow());   // whichever tab is open now, drawn with the analysis
   airframeLook();
   lap('panels');
-  $('loading').remove();
+  pillRO.disconnect(); $('loading').remove();
   console.log('[LEZ] boot', T.join(', '), window.__lezBoot ? `· modules ${window.__lezBoot}` : '', `· first view ${window.__lezFirstView} ms`);
   setTimeout(() => DUI.warm(), 1500);   // the Definition tab's live engine (a worker) once the page has settled
 })();

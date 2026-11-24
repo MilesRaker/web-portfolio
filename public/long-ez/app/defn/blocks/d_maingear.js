@@ -14,6 +14,8 @@ import { BRK_DEF, BRK_RHO } from '../d_brake.js';
 import { MCY_DEF, MCY_RHO } from '../d_mcyl.js';
 import { LIN_DEF } from '../d_brakeline.js';
 import { SHD_DEF } from '../d_heatshield.js';
+import { PNT_DEF, PNT_RHO, PBK_DEF } from '../d_pant.js';
+import { PANT_P, BRKT_P, BRKT_RHO } from '../../parts/wpD3_pant.js';
 import { SWT_DEF, SWT_RHO } from '../d_uswitch.js';
 import { solidRef } from '../solid_ref.js';   // solids by reference: meshes load on demand
 const BOW_SOLID = solidRef('gear_bow', 'BOW_SOLID');
@@ -24,6 +26,8 @@ const MCY_SOLID = solidRef('brake_mc', 'MCY_SOLID');
 const LIN_SOLID = solidRef('brake_line', 'LIN_SOLID');
 const SHD_SOLID = solidRef('heat_shield', 'SHD_SOLID');
 const SWT_SOLID = solidRef('gear_switch', 'SWT_SOLID');
+const PNT_SOLID = solidRef('gear_pant', 'PNT_SOLID');
+const PBK_SOLID = solidRef('gear_pant', 'PBK_SOLID');
 
 const mirror = () => [1, -1].map((sx) => ({ sx, x: 0, y: 0, z: 0 }));
 export const DEFS = {
@@ -41,6 +45,9 @@ Object.assign(DEFS, {
   'LEZ-32-311': prim(MCY_DEF, MC_P, MCY_SOLID, MCY_RHO),
   'LEZ-32-312': prim(LIN_DEF, LINE_P, LIN_SOLID, LINE_RHO),
   'LEZ-32-315': prim(SHD_DEF, SHIELD_P, SHD_SOLID, { sheet: 0.286 }),
+  // DC-005: the wheel pant (bought-in envelope, trimmed) and its mounting
+  'LEZ-32-320': prim(PNT_DEF, PANT_P, PNT_SOLID, PNT_RHO),
+  'LEZ-32-321': prim(PBK_DEF, BRKT_P, PBK_SOLID, BRKT_RHO),
   // the switch in its own frame, placed at S11, S12, S13 (x = BL, y = WL, z = FS, ft)
   'LEZ-32-216': prim(SWT_DEF, SW_P, SWT_SOLID, SWT_RHO, () => SW_AT.map((s) => ({ sx: 1, x: s.at[1], y: s.at[2], z: s.at[0] }))),
 });
@@ -73,5 +80,7 @@ export const VIEWS = { ...VIEWS_D,
   'LEZ-32-311': primView(MC_P, { notes: [['ROD EYE ON THE PEDAL TOE ARM, BODY EYE ON BLOCK C\'S ANCHOR (BOTH AN3)', 'rod']] }),
   'LEZ-32-312': primView(LINE_P, { titles: ['ROUTE, LOOKING AFT (BL ACROSS)', 'ROUTE, LOOKING INBOARD (FS ACROSS)'], notes: [['TUBE IN THE CABIN ALONG THE LOWER SIDE CORNER; -3 HOSE FROM THE BELLY UNION DOWN THE BOW\'S AFT FACE', 'tube']] }),
   'LEZ-32-315': primView(SHIELD_P, { titles: ['EDGE VIEW, LOOKING AFT', 'FACE VIEW, LOOKING INBOARD'], notes: [['0.025 321 STAINLESS; CLAMPED UNDER THE AXLE FLANGE', 'sheet']] }),
+  'LEZ-32-320': primView(PANT_P, { titles: ['FRONT VIEW, LOOKING AFT', 'SIDE VIEW, LOOKING INBOARD'], notes: [['PRE-MOULDED GLASS PANT ENVELOPE; LEG SLOT IN THE INNER WALL, 2 × #10 INBOARD, AN4 OUTBOARD HARD-POINT', 'shell']] }),
+  'LEZ-32-321': primView(BRKT_P, { titles: ['PLAN, LOOKING DOWN (BL ACROSS)', 'SIDE, LOOKING INBOARD'], notes: [['0.125 6061-T6 BRACKET UNDER THE UPPER AXLE BOLT HEADS; Ø0.75 STANDOFF ON THE AXLE NUT', 'bracket']] }),
   'LEZ-32-216': primView(SW_P, { titles: ['FRONT VIEW (OWN FRAME)', 'SIDE VIEW (OWN FRAME)'], notes: [['SWITCH ON A 0.040 6061-T6 ANGLE; 2 × #4 TO THE SWITCH, 2 × #6 TO THE HOST', 'bracket']] }),
 };

@@ -54,6 +54,7 @@ import { applySeat1 } from './revs_seat1.js';
 import { applySeat2 } from './revs_seat2.js';
 import { applySeat3 } from './revs_seat3.js';
 import { applyOcc12 } from './revs_occ12.js';
+import { applyR1 } from './revs_r1.js';
 import { freezeRevs } from './rev_freeze.js';
 import { applyInteg } from './revs_integ.js';
 import { applyStandIn } from './standin.js';
@@ -150,6 +151,7 @@ applySeat1(DEFS);     // 2026-11-22: front seat to the plans, 6 in forward at 45
 applySeat2(DEFS);     // 2026-11-22: upper seat back and headrest to builders' photos, small-pilot cushion (DC-007, revs_seat2.js)
 applySeat3(DEFS);     // 2026-11-22: seat on the belly, landing brake aft (DC-008, revs_seat3.js)
 applyOcc12(DEFS);     // 2026-11-22: occupant posture model (DC-009, revs_occ12.js)
+applyR1(DEFS);        // 2026-11-23: cabin routing clearance (DC-012) and wheel pants (DC-013) (revs_r1.js)
 export const REV_FREEZE = freezeRevs(DEFS);   // last: old revisions keep the text they had when made (rev_frozen.js, tools/freeze_revs.mjs)
 export const defOf = (pn) => DEFS[pn] || null;
 

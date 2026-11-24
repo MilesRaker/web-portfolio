@@ -27,6 +27,7 @@ import './blk_a_airframe.js';
 import './blk_b_cockpit.js';
 import './blk_c_controls.js';
 import './blk_d_maingear.js';
+import './wpD3_pant.js';   // DC-005: wheel pants LEZ-32-320 and their mounting LEZ-32-321
 import './blk_e_nosegear.js';
 import './blk_f_fuel.js';
 import './blk_g_powerplant.js';
@@ -38,6 +39,7 @@ import './wp14_canopy_latch.js';
 import './wp5_integration.js';
 import './wp8_ident.js';
 import './wpS1_yaw.js';   // directional stability and control (yaw-cnb, yaw-cndr, yaw-cnr)
+import './wpR1_clear.js';   // DC-004: cabin routing clearance pass on the final routes (before LOAD.after rebuilds clamps and holes)
 // every parts module has run: lazy geometry built from other parts' routes is rebuilt from here on (systems.js LOAD)
 import { markLoaded } from '../systems.js';
 markLoaded();
