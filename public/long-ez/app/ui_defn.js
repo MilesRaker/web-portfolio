@@ -216,7 +216,9 @@ export function initDefnUI(ctx) {
       const D = places[pn]; if (!m || !D) return null;
       const k = FTM / 12, grp = new THREE.Group();
       const geos = m.groups.map((g) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3)); geo.setIndex(m.idx.slice(g.start, g.start + g.count)); geo.computeVertexNormals(); return { feat: g.feat, geo }; });
-      const place = D.place ? D.place.map((q) => new THREE.Matrix4().set(q.sx * k, 0, 0, FTM * q.x, 0, 0, k, FTM * q.y, 0, k, 0, FTM * q.z, 0, 0, 0, 1))   // own frame: x across, y aft, z up
+      // a flat laminate's own plane frame (o, eu, ev, en in [FS, BL, WL] in): mesh x along eu, y along en (through the thickness), z along ev
+      const onFrame = (f) => { const o = f.o, u = f.eu, n = f.en, v = f.ev; return new THREE.Matrix4().set(k * u[1], k * n[1], k * v[1], k * o[1], k * u[2], k * n[2], k * v[2], k * o[2], k * u[0], k * n[0], k * v[0], k * o[0], 0, 0, 0, 1); };
+      const place = D.place ? D.place.map((q) => (q.frame ? onFrame(q.frame) : new THREE.Matrix4().set(q.sx * k, 0, 0, FTM * q.x, 0, 0, k, FTM * q.y, 0, k, 0, FTM * q.z, 0, 0, 0, 1)))   // own frame: x across, y aft, z up
         : D.book ? [new THREE.Matrix4().set(k, 0, 0, 0, 0, 0, k, FTM * CS_FIT.L, 0, k, 0, FTM * GEO.csSpar.s, 0, 0, 0, 1)]   // x BL, y aft, z up from the box bottom
         : [-1, 1].flatMap((sg) => [ATTACH.pinU, ATTACH.pinL].map((pin) => new THREE.Matrix4().set(sg * k, 0, 0, sg * FTM * LUG.yPin, 0, 0, k, FTM * (pin[2] - D.vMid / 12), 0, k, 0, FTM * pin[0], 0, 0, 0, 1)));
       for (const Mx of place) for (const g of geos) { const mesh = new THREE.Mesh(g.geo, solidMat); mesh.matrixAutoUpdate = false; mesh.matrix.copy(Mx); mesh.userData = { feat: g.feat, defPN: pn }; grp.add(mesh); }
@@ -282,7 +284,7 @@ export function initDefnUI(ctx) {
   /** a click in the 3D view on the solid: light the feature and its dimensions */
   function pick(raycaster) {
     if (!shownPN || !Object.keys(solids).length) return false;
-    const h = raycaster.intersectObjects(Object.values(solids), true)[0]; if (!h) return false;
+    const h = raycaster.intersectObjects(Object.values(solids).filter((g) => g.visible), true)[0]; if (!h) return false;   // hidden solids are not pickable
     const pn = h.object.userData.defPN, f = h.object.userData.feat;
     if (pn !== selPN) selectPart(pn);
     lightFeature(f === 'top' || f === 'bottom' ? 'thick' : f);

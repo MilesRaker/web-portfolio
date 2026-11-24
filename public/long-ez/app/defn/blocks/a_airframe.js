@@ -59,20 +59,25 @@ function rudderView(k, D) {
   return { svg: o, bottom: 150, scale: '1:8 / 1:2', notesBox: { x: 1240, top: 150, n: 50, bottom: 860 } };
 }
 
+// the flat laminates whose meshes are written in their own plane frame (bulkhead F28, rear bulkhead, firewall, seat back and
+// seat top) are placed by that frame; before 2026-11-24 they were placed as if in the aircraft frame and all sat at FS 0, in
+// front of the nose
+const onFrame = (p) => [{ frame: p.frame }];
+
 export const DEFS = {
-  // bulkhead F28: aircraft frame, in place (the solid's mesh is written in the aircraft frame)
+  // bulkhead F28: the solid's mesh is in its own plane frame (x across, y through, z up), placed by that frame
   'LEZ-53-165': { def: F28_DEF, solid: F28_SOLID, params: f28ParamsNow, hash: paramHash, expect: f28Expect, laminate: true,
-    massOf: (m) => f28MassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
+    massOf: (m) => f28MassOf(m.volumes || {}), place: onFrame },
   'LEZ-53-175': { def: RB_DEF, solid: RB_SOLID, params: rbParamsNow, hash: paramHash, expect: flatExpect, laminate: true,
-    massOf: (m) => rbMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
+    massOf: (m) => rbMassOf(m.volumes || {}), place: onFrame },
   'LEZ-53-180': { def: FW_DEF, solid: FW_SOLID, params: fwParamsNow, hash: paramHash, expect: flatExpect, laminate: true,
-    massOf: (m) => fwMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
-  // front seat back: built in its reclined plane, the mesh written in the aircraft frame
+    massOf: (m) => fwMassOf(m.volumes || {}), place: onFrame },
+  // front seat back: built in its reclined plane; placed by that plane's frame
   'LEZ-53-170': { def: SB_DEF, solid: SB_SOLID, params: sbParamsNow, hash: paramHash, expect: flatExpect, laminate: true,
-    massOf: (m) => sbMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
+    massOf: (m) => sbMassOf(m.volumes || {}), place: onFrame },
   // seat-2: the upper seat back and headrest, built in its vertical plane
   'LEZ-53-171': { def: SU_DEF, solid: SU_SOLID, params: suParamsNow, hash: paramHash, expect: flatExpect, laminate: true,
-    massOf: (m) => suMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
+    massOf: (m) => suMassOf(m.volumes || {}), place: onFrame },
   // nose ballast: the host bulkhead, the fixed lead and the removable plates, all in place
   'LEZ-08-105': { def: NB_DEF, solid: NB_SOLID, params: nbParams, hash: paramHash, expect: flatExpect, laminate: true, massOf: (m) => nbMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
   'LEZ-08-100': { def: FB_DEF, solid: FB_SOLID, params: fbParams, hash: paramHash, expect: ballastExpect, massOf: (m) => fbMassOf(m.volumes || {}), place: () => [{ sx: 1, x: 0, y: 0, z: 0 }] },
